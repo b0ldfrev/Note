@@ -23,7 +23,6 @@
 
 * [Windows_Operating_System]()
 
-    * []()
 
 
 * [Windows_Kernel]()

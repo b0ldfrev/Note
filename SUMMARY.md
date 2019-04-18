@@ -2,7 +2,6 @@
 
 # Summary
 
-* [Introduction](README.md)
 
 * [vue]()
 

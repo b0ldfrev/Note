@@ -24,32 +24,36 @@ bins 的前 7 个大小的空闲 chunk，也就是说，对于 `SIZE_SZ` 为 4B 
 
 ![pic1]
 
+**idx为索引，hold_size为用户请求的size,size为实际分配的chunk_size**
+
 以 64 为系统为例，因此 fastbin 的范围为32字节到128字节(0x20-0x80)，如下：
 
+```nasm
+Fastbins[idx=0,hold_size=00-0x18,size=0x20] 
+Fastbins[idx=1,hold_size=0x19-0x28,size=0x30] 
+Fastbins[idx=2,hold_size=0x29-0x38,size=0x40] 
+Fastbins[idx=3,hold_size=0x39-0x48,size=0x50] 
+Fastbins[idx=4,hold_size=0x49-0x58,size=0x60] 
+Fastbins[idx=5,hold_size=0x59-0x68,size=0x70] 
+Fastbins[idx=6,hold_size=0x69-0x78,size=0x80]
+```
 
-	Fastbins[idx=0, size=0x20] 
-	Fastbins[idx=1, size=0x30] 
-	Fastbins[idx=2, size=0x40] 
-	Fastbins[idx=3, size=0x50] 
-	Fastbins[idx=4, size=0x60] 
-	Fastbins[idx=5, size=0x70] 
-	Fastbins[idx=6, size=0x80]
-
-
-关于`fastbin_attack`，任意地址分配，对`chunk_size`的检测问题
+关于`fastbin_attack`，任意地址分配，对`chunk_size`的检测问题，由于在分配`fastbin_chunk`时，并没有做 `do_check_remalloced_chunk`检查，所以我们分配的`fastbin_chunk` 的size 只需要满足下面条件，就能申请成功
 
 直接上源码：
 
-	if (*fb != NULL
-	&&  __builtin_expect ( fastbin_index( chunksize(*fb)) != idx, 0))
-	{
-	errstr = "invalid fastbin entry (free)";
-	goto errout;
-	}
-	
-	#define  fastbin_index(sz) \
-	((((unsigned int)(sz)) >> (SIZE_SZ == 8 ? 4 : 3)) - 2)
 
+```c
+if (*fb != NULL
+&&  __builtin_expect ( fastbin_index( chunksize(*fb)) != idx, 0))
+{
+errstr = "invalid fastbin entry (free)";
+goto errout;
+}
+
+#define  fastbin_index(sz) \
+((((unsigned int)(sz)) >> (SIZE_SZ == 8 ? 4 : 3)) - 2)
+```
 
 **宏 `fastbin_index(sz)`用于获得 fast bin 在 fast bins 数组中的 index，由于 bin[0]和 bin[1]中
 的chunk不存在，所以需要减2，对于`SIZE_SZ`为4B的平台，将sz除以8减2得到fast bin index，

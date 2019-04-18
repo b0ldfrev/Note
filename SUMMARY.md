@@ -6,9 +6,15 @@
 
 * [vue]()
 
-    * [pwn](pwn.md)
+    * [pwn](anger.md)
 
     * [blind](blind.md)
+   
+    * [c++](./tools/c++.md)
 
 * [fast](fast_bin.md)
+* [two](tools/c++.md)
+
+
+
 

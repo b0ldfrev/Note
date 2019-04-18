@@ -2,7 +2,7 @@
 layout:     post
 title:      "64位通用gadget"
 subtitle:   "x64 ROP 笔记"
-date:       2018-06-03 12:00:00
+date:       2018-06-03 10:00:00
 author:     "Chris"
 catalog: true
 tags:

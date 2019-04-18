@@ -2,7 +2,7 @@
 layout:     post
 title:      "其他获取libc方法"
 subtitle:   ""
-date:       2018-08-04 12:00:00
+date:       2018-08-04 10:00:00
 author:     "Chris"
 catalog: true
 tags:

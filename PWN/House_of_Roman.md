@@ -17,7 +17,7 @@ House of Roman 实现了开启PIE没有leak地址功能的程序的利用，这�
 
 PIE和系统的aslr，对于一个32bit的binary，它的高20bit会被随机化的，而最后的12bit不会被随机化(64位同样)，如果漏洞触发，我们能够恰好覆盖最后的12bit，实际上也能在一定的范围内劫持程序的控制流
 
-![666](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/3.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/3.jpg)
 
 
 ## 大致思路

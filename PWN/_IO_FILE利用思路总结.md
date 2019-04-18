@@ -191,11 +191,7 @@ $7 = {
 
 如果程序有调用`setbuf`或者`setvbuf`函数来设置stdin,stdout,stderr输入流等，那么程序的bss段上就会存在它的指针（但未初始化）如：
 
-![pic2](./pic/other/1.jpg)
-
-![pic3](../pic/other/1.jpg)
-
-![pic4](/pic/other/1.jpg)
+![](/pic/other/1.jpg)
 
 但通常情况下，可以泄露libc地址的情况下，我们能够在libc文件中找到直接找到`_IO_2_1_stdout_`
 

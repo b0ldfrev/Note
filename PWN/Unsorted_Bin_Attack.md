@@ -20,7 +20,6 @@ tags:
 
 ![pic1]
 
-
 在 Unsorted Bin  中它自身的fd总指向 Unsorted Bin 的双向链表头，bk指向双向链表尾部
 
 **利用过程**：

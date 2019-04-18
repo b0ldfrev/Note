@@ -17,7 +17,7 @@ House of Roman 实现了开启PIE没有leak地址功能的程序的利用，这�
 
 PIE和系统的aslr，对于一个32bit的binary，它的高20bit会被随机化的，而最后的12bit不会被随机化(64位同样)，如果漏洞触发，我们能够恰好覆盖最后的12bit，实际上也能在一定的范围内劫持程序的控制流
 
-![666](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/House_of_Roman/3.jpg)
+![666](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/3.jpg)
 
 
 ## 大致思路
@@ -30,19 +30,19 @@ PIE和系统的aslr，对于一个32bit的binary，它的高20bit会被随机化
 
 再编辑该chunk，将fd指针的后8字节 覆盖成libc中 `malloc_hook - 0x23`偏移的后8字节,因为通常main_arean地址在`__malloc_hook`的下面不远处，算偏移一般都不会超过FF 无需进位。
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/House_of_Roman/2.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/2.jpg)
 
 所以这里编辑chunk 0的内容就为 `\x1d`覆盖后 chunk 0 的 fd 中的内容就刚刚好是`malloc_hook - 0x23`
 
 还有必要利用Off-By-One将该chunk 0的size大小改成fastbin范围，最后的chunk 0如下：
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/House_of_Roman/1.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/1.jpg)
 
 ## 2 构造fastbin链，进行fastbin_attack
 
 构造如图：
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/House_of_Roman/4.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/4.jpg)
 
 连续三次分配0x70大小的chunk之后，我们就能分配得到`malloc_hook_chunk`，便可以随意往`malloc_hook`写东西 ( 注意：该操作结束之后要修复 fastbin链表 )
 
@@ -50,7 +50,7 @@ PIE和系统的aslr，对于一个32bit的binary，它的高20bit会被随机化
 
 修改`malloc_hook`为`main_arena+0x58`
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/House_of_Roman/5.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/House_of_Roman/5.jpg)
 
 ## 4 编辑`malloc_hook_chunk`内容
 

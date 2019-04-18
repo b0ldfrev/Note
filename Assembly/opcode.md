@@ -13,7 +13,7 @@ tags:
 
 # 1.指令编码(硬编码)的结构图
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/1.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/1.jpg)
 
 详细表格见[Intel手册卷2 B————>APPENDIX A OPCODE MAP————>ONE, TWO, AND THREE-BYTE OPCODE MAPS]()
 
@@ -198,17 +198,17 @@ tags:
 该字节的8个位被分成了三部分:
 
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/2.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/2.jpg)
 
 其中,Reg/Opcpde (第3，4，5位，共3个字节) 描述指令中的G部分，即寄存器（Reg/Opcpde 也有可能用来描述操作码，看第一个opcode来具体分析）
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/3.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/3.jpg)
 
 Mod(第6，7位)和R/M(第0，1，2位)共同描述指令中的E部分，即寄存器/内存
 
 那么，这8个位具体是如何工作的呢，Intel操作手册给出了一张表
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/4.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/4.jpg)
 
 
 前面我们已经讨论了Reg/Opcode部分（即3，4，5位）是怎样描述寄存器的，接下来我们重点说一下Mod和R/M是怎样合作描述寄存器/内存的
@@ -219,13 +219,13 @@ Mod(第6，7位)和R/M(第0，1，2位)共同描述指令中的E部分，即寄�
 
 88 是操作指令，其后跟随的01为ModR/M
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/5.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/5.jpg)
 
 0x88描述了操作数宽度为b(byte)，且操作数的顺序为Eb Gb,所以这条汇编指令为`MOV BYTE PTR DS:[ECX],AL`
 
 同理可以分析出如下操作指令对应的汇编指令
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/6.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/6.jpg)
 
 1,ESP指向栈顶。是浮动的，不确定的。Intel将这个编码废弃，由另外的格式说明。
 
@@ -238,11 +238,11 @@ ModR/M字段是用来是用来进行内存寻址的，可当地址形如DS:[EAX+
 
 下图是之前没有涉及到的三种情况:
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/7.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/7.jpg)
 
 这三种情况表示，在ModR/M字节后，还紧跟着一个SIB字节，SIB字节的8位被分成了三部分：
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/8.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/8.jpg)
 
 在例子DS:[EAX+ECX*2+12345678] 中，Scale描述 2^1 ,Index 描述ECX，Base描述EAX，而12345678 由ModR/M字段决定。
 
@@ -262,15 +262,15 @@ ModR/M字段是用来是用来进行内存寻址的，可当地址形如DS:[EAX+
 
 1.Gb为AL，所以Reg/Opcode部分为000
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/9.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/9.jpg)
 
 2.内存地址为 寄存器 + I32 的格式，所以Mod部分为10， 偏移为 78563412
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/10.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/10.jpg)
 
 3.内存地址中寄存器部分多个寄存器，即在ModR/M字节后，还跟随着SIB字节，所以R/M部分为100
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/11.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/11.jpg)
 
 由此，ModR/M字节为0x84
 
@@ -278,21 +278,21 @@ ModR/M字段是用来是用来进行内存寻址的，可当地址形如DS:[EAX+
 
 1.DS:[EAX+ECX*2+12345678]中，Base对应着EAX，所以Base部分为000
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/12.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/12.jpg)
 
 2.Index对应着ECX，所以Index部分为001
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/13.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/13.jpg)
 
 3.Scale对应着21，所以Scale部分为01
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/14.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/14.jpg)
 
 由此，SIB字节为0x48
 
 以上，可总结为如下图
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/15.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/15.jpg)
 
 由上，可得出指令编码为 88 84 48 ，再加上偏移12345678，完整的指令编码为88 84 48 12 34 56 78
 
@@ -303,7 +303,7 @@ ModR/M字段是用来是用来进行内存寻址的，可当地址形如DS:[EAX+
 **SIB字段的图表如下**
 
 
-![](https://github.com/yxshyj/yxshyj.github.io/tree/master/img/pic/opcode/16.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/opcode/16.jpg)
 
     1.当Index =100时，Index被0替代，此时只有Base有效
     2.当Base =101时，Base被0替代，此时只用Index有效

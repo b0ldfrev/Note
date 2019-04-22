@@ -23,17 +23,31 @@
 
 * [Windows_Operating_System]()
 
-
+	* [Dll隐藏](/Windows_Operating_System/Dll隐藏.md)
+	* [Dll注入之远程线程注入](/Windows_Operating_System/Dll注入之远程线程注入.md)
+	* [IAT_HOOK原理实现](/Windows_Operating_System/IAT_HOOK原理实现.md)
+	* [Windows下通用ShellCode原理](/Windows_Operating_System/Windows下通用ShellCode原理.md)
+	* [代码注入](/Windows_Operating_System/代码注入.md)
+	* [分页机制](/Windows_Operating_System/分页机制.md)
 
 * [Windows_Kernel]()
 * [Virus_Analysis]()
 * [Program]()
+
+	* [Dll的生成与使用](/Program/Dll的生成与使用.md)
+
+
 * [Miscellaneous]()
 * [Linux_Operating_System]()
 * [Linux_Kernel]()
 * [Fuzz]()
 * [CVE]()
 * [Assembly]()
+
+	* [Junk_Code_Analysis](/Assembly/Junk_Code_Analysis.md)
+	* [opcode](/Assembly/opcode.md)
+
+
 * [Andriod_Security]()
 
 

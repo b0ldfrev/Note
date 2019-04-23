@@ -1,15 +1,3 @@
----
-layout:     post
-title:      "House of Force"
-subtitle:   "笔记"
-date:       2018-11-24 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
- 
----
-
 利用条件：
 
 * 能够以溢出等方式控制到 top chunk 的 size 域

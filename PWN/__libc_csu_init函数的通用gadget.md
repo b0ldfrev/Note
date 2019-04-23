@@ -1,16 +1,3 @@
----
-layout:     post
-title:      "64位通用gadget"
-subtitle:   "x64 ROP 笔记"
-date:       2018-06-03 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - Pwn
-    - 笔记
-    - Linux
- 
----
 
 # 简介
 
@@ -26,7 +13,7 @@ x86中参数都是保存在栈上,但在x64中前六个参数依次保存在RDI,
 
 1.执行gad1
 
-```nasm
+```python
 	.text:000000000040089A                 pop     rbx  #必须为0
 	.text:000000000040089B                 pop     rbp  #必须为1
 	.text:000000000040089C                 pop     r12  #call（由于下面call指令的寻址方式为间接寻址，所以此处应为got表地址） 
@@ -37,7 +24,7 @@ x86中参数都是保存在栈上,但在x64中前六个参数依次保存在RDI,
 ```
 2.再执行gad2
 
-```nasm
+```python
 	.text:0000000000400880                 mov     rdx, r13
 	.text:0000000000400883                 mov     rsi, r14
 	.text:0000000000400886                 mov     edi, r15
@@ -56,7 +43,7 @@ x86中参数都是保存在栈上,但在x64中前六个参数依次保存在RDI,
 ```
 这样的话
 
-```nasm
+```python
 	r13 =rdx =arg3
 	r14 =rsi =arg2
 	r15 =edi =arg1
@@ -92,7 +79,7 @@ x86中参数都是保存在栈上,但在x64中前六个参数依次保存在RDI,
 
 我们把`_dl_runtime_resolve`反编译可以得到：
 
-```nasm
+```python
 	0x7ffff7def200 <_dl_runtime_resolve>:   sub    rsp,0x38
 	0x7ffff7def204 <_dl_runtime_resolve+4>: mov    QWORD PTR [rsp],rax
 	0x7ffff7def208 <_dl_runtime_resolve+8>: mov    QWORD PTR [rsp+0x8],rcx
@@ -119,7 +106,7 @@ x86中参数都是保存在栈上,但在x64中前六个参数依次保存在RDI,
 
 通过反编译level5程序我们可以看到[email protected]()这个函数使用PLT [0] 去查找write函数在内存中的地址，函数jump过去的地址*0x600ff8其实就是`_dl_runtime_resolve`()在内存中的地址了。所以只要获取到0x600ff8这个地址保存的数据，就能够找到`_dl_runtime_resolve`()在内存中的地址：
 
-```nasm
+```python
 	0000000000400420 <[email protected]>:
 	  400420:   ff 35 ca 0b 20 00       pushq  0x200bca(%rip)        # 600ff0 <_GLOBAL_OFFSET_TABLE_+0x8>
 	  400426:   ff 25 cc 0b 20 00       jmpq   *0x200bcc(%rip)        # 600ff8 <_GLOBAL_OFFSET_TABLE_+0x10>
@@ -139,14 +126,14 @@ x86中参数都是保存在栈上,但在x64中前六个参数依次保存在RDI,
 
 另一个要注意的是，想要利用这个gadget，我们还需要控制rax的值，因为gadget是通过rax跳转的：
 
-```nasm
+```python
 	0x7ffff7def235 <_dl_runtime_resolve+53>:    mov    r11,rax
 	……
 	0x7ffff7def25e <_dl_runtime_resolve+94>:    jmp    r11
 ```
 所以我们接下来用ROPgadget查找一下libc.so中控制rax的gadget：
 
-```nasm
+```python
 	ROPgadget --binary libc.so.6 --only "pop|ret" | grep "rax"
 	0x000000000001f076 : pop rax ; pop rbx ; pop rbp ; ret
 	0x0000000000023950 : pop rax ; ret

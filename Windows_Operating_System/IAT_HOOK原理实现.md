@@ -1,24 +1,10 @@
----
-layout:     post
-title:      "IAT HOOK原理实现"
-subtitle:   "Hook 3Ring"
-date:       2018-05-15 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - HOOK
-    - Windows
-    - PE
-    - 病毒分析
- 
----
+
 
 ## 0x00 原理简介
 
 IAT（Import Address Table，输入地址表）：当PE文件装入的时候，Windows加载器的工作之一就是定位所有被输入的函数和数据，并且让正在被装入的文件可以使用那些地址，输入函数就是被程序调用但其执行代码又不在程序中的函数，这些函数的代码位于相关的dll等文件中，当然只有被程序调用到的函数才会出现在IAT中（EAT是PE中所有导出的函数或者变量，注意区别，一般的EXE文件不会有导出表，但并不是说EXE不能导出函数或者变量）。HOOK IAT就是钩住感兴趣的函数，然后改变程序的执行流程或者对该函数进行监控。
 
 ## 0x01 代码实现
->本次实验基于[dll远程线程注入](http://sirhc.xyz/2018/06/15/dll%E6%B3%A8%E5%85%A5%E4%B9%8B%E8%BF%9C%E7%A8%8B%E7%BA%BF%E7%A8%8B%E6%B3%A8%E5%85%A5/)
 
 1,HOOK函数MessageBox，首先定义一个用于替换的MyMessageBox函数。
 

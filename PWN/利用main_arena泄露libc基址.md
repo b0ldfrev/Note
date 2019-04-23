@@ -1,14 +1,3 @@
----
-layout:     post
-title:      "利用main_arena泄露libc基址"
-subtitle:   "main_arena 利用"
-date:       2018-07-28 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
- 
----
 
 利用条件
 

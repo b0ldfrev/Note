@@ -1,20 +1,3 @@
----
-layout:     post
-title:      "Windows下通用ShellCode原理"
-subtitle:   "基于GetProcAddress的ShellCode编写"
-date:       2017-05-28 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - ShellCode
-    - Windows
-    - PE
-    - 病毒分析
-    - 笔记
- 
----
-
-
 >用 C 汇编实现，编译环境VC6.0, 实测 Win all x86 x64 系统可行
 
 ## 0x00 原理简述

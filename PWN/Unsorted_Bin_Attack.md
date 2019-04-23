@@ -1,15 +1,3 @@
----
-layout:     post
-title:      "Unsorted Bin Attack 笔记"
-subtitle:   "任意地址写"
-date:       2018-09-06 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
- 
----
-
 ## Unsorted Bin Attack
 
 * 当一个较大的 chunk 被分割成两半后，如果剩下的部分大于 MINSIZE，就会被放到 unsorted bin 中。
@@ -146,4 +134,4 @@ unsorted bin attack 确实可以修改任意地址的值，但是所修改成的
 * 最后一步申请chunk时只要不等于unsorted bin里面的chunk大小，便可以进入`malloc_printerr`流程.覆盖 `_IO_list_all`为main_arena+48或88，这时unsorted bin中的chunk会被链入`small_bin`,至于是bins[n],n就得看chunk大小；使得`_IO_list_all`结构的`_chain`刚好就是bins[n]，在bins[n]也就是之前的unsorted bin chunk中构造新的
 `_IO_FILE`。这也就是`_IO_FILE`利用的FSOP（File Stream Oriented Programmin）
 
-> [相关笔记](https://sirhc.xyz/2018/07/28/%E5%88%A9%E7%94%A8main_arena%E6%B3%84%E9%9C%B2libc%E5%9F%BA%E5%9D%80/)
+

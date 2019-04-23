@@ -1,15 +1,3 @@
----
-layout:     post
-title:      "Fast bin 笔记"
-subtitle:   "关于fatbin_attack的size构造"
-date:       2018-09-04 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
- 
----
-
 
 Fast bins 主要是用于提高小内存的分配效率，默认情况下，对于 `SIZE_SZ` 为 4B 的平台，
 小于 64B 的 chunk 分配请求，对于 `SIZE_SZ` 为 8B 的平台，小于 128B 的 chunk 分配请求，首

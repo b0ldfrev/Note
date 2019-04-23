@@ -1,16 +1,3 @@
----
-layout:     post
-title:      "Linux ShellCode"
-subtitle:   "最短的通用shellcode编写"
-date:       2018-11-16 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
-    - ShellCode
-    - Linux
- 
----
 
 在寄存器都是非理想值情况下(shellcode可根据环境具体触发时寄存器的值做长度调整)，我本着最优通用的原则，整理了Linux下32位和64位最短通用shellcode的编写
 

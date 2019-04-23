@@ -1,14 +1,4 @@
----
-layout:     post
-title:      "其他获取libc方法"
-subtitle:   ""
-date:       2018-08-04 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
- 
----
+
 
 虽然DynELF是一个dump利器，但是有时候我们也会碰到一些令人尴尬的意外情况，比如写不出来leak函数，下libc被墙等等。这一节我们来介绍一些可行的解决方案。
 首先要介绍的是[libcdb.com](http://libcdb.com/)，这是一个用来在线查询libc版本的网站。

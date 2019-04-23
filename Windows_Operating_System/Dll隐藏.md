@@ -1,16 +1,3 @@
----
-layout:     post
-title:      "Dll隐藏"
-subtitle:   " \"基于摘链的模块隐藏\""
-date:       2018-01-05 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - Windows
-    - 病毒分析
- 
----
-
 ## 0x00 原理简述
 * 利用fs寄存器，找到TEB的地址->PEB的地址。PEB的0xC偏移处为一个指向PEB\_LDR\_DATA结构体的指针Ldr，PEB\_LDR\_DATA的0xC的偏移处为一个指向LIST\_ENTRY结构体的指针InLoadOrderModuleList，这是一个按加载顺序构成的双向模块链表。同时LIST\_ENTRY的父结构体为LDR\_DATA\_TABLE\_ENTRY，该结构体里有俩有用信息->0x18  DLLBase(模块基址), ->0x2c  BaseDllName(指向UNICODE_STRING结构体 模块名字为unicode类型）.我们只需要获得当前进程想要隐藏的模块基址，再分别把它在InLoadOrderModuleList链，InMemoryOrderModuleList链，InInitializationOrderModuleList链中的模块节点摘掉，便可以隐藏dll。
 

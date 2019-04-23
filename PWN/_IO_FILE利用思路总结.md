@@ -1,18 +1,3 @@
----
-layout:     post
-title:      "_IO_FILE利用思路总结"
-subtitle:   ""
-date:       2018-12-07 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - Pwn
-    - 笔记
- 
----
-
->对所有libc版本的_IO_FILE利用姿势做了一个总结
-
 ## _IO_FILE定义
 
 FILE结构定义在libio.h中，如下所示
@@ -380,7 +365,7 @@ __int64 __fastcall IO_str_overflow(_IO_FILE *fp, unsigned int a2)
 
 这里有个坑，就是`(binsh_addr-100)/2`, 当`/bin/sh`地址存在于libc中，它/2再*2 若是除不尽有余数的话 会影响最后的参数地址，我们为了避免这种情况我们尽量在堆内存中填入`"/bin/sh\x00"`, 因为堆内存往往都是2的倍数对齐。
 
-#### 利用_IO_buf_end
+## 利用_IO_buf_end实现write
 
 有条件的话我们可修改`_IO_2_1_stdin_`的 `_IO_buf_base` 与 `_IO_buf_end `,这样在执行scanf读取数据到缓冲区时，就可以写入东西到`_IO_buf_base`
 
@@ -402,6 +387,21 @@ payload += "\x00" * (libc.sym['__malloc_hook'] - libc.sym['_IO_2_1_stdin_] - 0xe
 payload += p64(one_gadget)
 ```
 
-## 后记
+## 利用IO_write_base实现leak
 
-我们可以直接用基于glibc 2.24的poc去打依赖于glibc 2.23的程序
+这里以libc2.23讲解
+
+如图
+
+![](../pic/other/14.png)
+
+申请到`_IO_2_1_stderr_+160` 该处 错位能构造出一个size域为0x7f的chunk；
+
+将`_IO_2_1_stdout_`的flag填成p64(0xfbad1800)能过printf或者puts的check，其他项随意填充成相同的libc地址即可；
+
+重要的是将`IO_write_base`处的低1字节填充成“\x50”；
+
+本来的输出应该是行缓冲，即原本的`*（IO_write_base）`=0x0a现在我们覆盖了`IO_write_base`的低字节填充成“\x50”，再输出内容时，就会打印`0x7ffff7bb5650`处的内容，直到遇到0x0a换行标志。这样就能泄露libc地址。
+
+
+

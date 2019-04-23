@@ -1,15 +1,3 @@
----
-layout:     post
-title:      "Dll的生成与使用"
-date:       2017-05-16 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - Windows
-    - 笔记
- 
----
-
 ## 0x00 动态链接库(dll)概述
 
 dll可执行文件，既不能直接运行，也不能接收消息，它们是一些独立的文件。其中包含能被可执行程序或其他dll调用来完成某项工作的函数，只有在其他模块调用dll中的函数时，dll才发挥作用。 

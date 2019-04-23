@@ -1,16 +1,3 @@
----
-layout:     post
-title:      "Dll注入之远程线程注入"
-subtitle:   " \"CreateRemoteThread\""
-date:       2018-06-15 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - Windows
-    - 病毒分析
- 
----
-
 ## 0x00 原理简介
 基本思路就是让远程进程载入一个我们的dll，这样我们只要在dll里面写入相关代码，基本就可以为所欲为了。但问题是远程进程显然不可能自己调用LoadLibrary来加载我们的dll，我们就要想办法“让”它来调用。我们用CreateRemoteThread函数在远程进程中创建一个线程，线程函数的地址设为LoadLibrary的地址，线程函数参数设为“Mydll.dll”。即让远程进程调用LoadLibrary载入我们的dll，dll的主函数DllMain第二个参数ul_reason_for_call
 为调用原因。通过远程线程加载dll时，是以DLL_PROCESS_ATTACH方式加载，所以在dll的case DLL_PROCESS_ATTACH:下写上你要执行的代码。

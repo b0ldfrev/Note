@@ -1,19 +1,3 @@
----
-layout:     post
-title:      "Return-to-dl-resolve原理"
-subtitle:   "Lazy binding 延迟绑定细节"
-date:       2018-11-27 10:00:00
-author:     "Chris"
-catalog: true
-tags:
-    - 笔记
-    - Linux
-    - Pwn
- 
----
-
->前言：初学Pwn的时候，是从栈溢出开始，在网上找了很多介绍Return-to-dl-resolve技术的文章，但还是云里雾里，不懂其中精髓,于是就放一边去。最近发现网上有一篇博文对该技术介绍的很细致，我怕博主换域名，于是Copy一份到我的博客。
-
 ## About GOT and PLT
 
 为了了解`GOT`和`PLT`，首先要知道关于`PIC`的知识，`Position Independent Code(PIC)`是为了是为了重定位动态链接库的`symbols`，现代操作系统不允许修改代码段，只能修改数据段，而使用了动态链接库后函数地址只有在执行时才能确定，所以程序内调用的库中的函数地址在编译时不知道，所以，编译时将函数调用返回`.data`段，而包含`PIC`的程序在运行时需要更改`.data`段中的`GOT`和`PLT`来重定位全局变量。

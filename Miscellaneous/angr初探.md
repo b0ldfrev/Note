@@ -91,7 +91,7 @@ root@ubuntu:~#
 
 贴IDA代码：
 
-![](/img/pic/angr/1.jpg)
+![](https://raw.githubusercontent.com/yxshyj/yxshyj.github.io/master/img/pic/angr/1.jpg)
 
 好吧流程其实挺简单的，但是分析算法就有点耗时间了，以前我都是人脑分析，撸py解密脚本，现在我们直接上angr
 

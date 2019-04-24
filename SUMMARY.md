@@ -28,7 +28,7 @@
 	* [IAT_HOOK原理实现](/Windows_Operating_System/IAT_HOOK原理实现.md)
 	* [Windows下通用ShellCode原理](/Windows_Operating_System/Windows下通用ShellCode原理.md)
 	* [代码注入](/Windows_Operating_System/代码注入.md)
-	* [分页机制](/Windows_Operating_System/分页机制.md)
+	* [inline_hook框架](/Windows_Operating_System/inline_hook框架.md)
 
 * [Windows_Kernel]()
 * [Virus_Analysis]()
@@ -45,6 +45,7 @@
 * [Linux_Operating_System]()
 
 	* [系统调用](/Linux_Operating_System/系统调用.md)
+	* [分页机制](/Linux_Operating_System/分页机制.md)
 
 
 * [Linux_Kernel]()

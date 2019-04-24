@@ -401,7 +401,7 @@ payload += p64(one_gadget)
 
 重要的是将`IO_write_base`处的低1字节填充成“\x50”；
 
-本来的输出应该是行缓冲，即原本的`*（IO_write_base）`=0x0a现在我们覆盖了`IO_write_base`的低字节填充成“\x50”，再输出内容时，就会打印`0x7ffff7bb5650`处的内容，直到遇到0x0a换行标志。这样就能泄露libc地址。
+使其在下次puts时输出我们修改后的_IO_write_base到_IO_write_ptr/_IO_write_end的数据。这样就能泄露libc地址。
 
 
 

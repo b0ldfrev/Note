@@ -47,15 +47,18 @@ JMP newbark;   //然后调回去
 ```
 
 
-在0环 hook ， 禁止和开启系统写保护，实现底层的hook。
+在0环 hook ， 禁止系统写保护，实现底层的hook。
 
 ```c
+void WPOFF()
+{
+  ULONG uAttr;
   _asm
   {
     push eax;
     mov eax, cr0;
     mov uAttr, eax;
-    and eax, 0FFFEFFFFh; // CR0 16 BIT = 0   禁用写保护
+    and eax, 0FFFEFFFFh; // CR0 16 BIT = 0
     mov cr0, eax;
     pop eax;
     cli

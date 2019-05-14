@@ -33,7 +33,7 @@ angr是一个用于分析二进制文件的python框架。它专注于静态和�
 
 5，新建一个python的虚拟机环境
 
-	mkvirutalenv angr
+	mkvirtualenv angr
 
 6，在刚才新建的虚拟环境里面
 

@@ -40,6 +40,7 @@
 * [Miscellaneous]()
 
 	* [angr初探](/Miscellaneous/angr初探.md)
+	* [ctf笔记](/Miscellaneous/ctf笔记.md)
 
 
 * [Linux_Operating_System]()

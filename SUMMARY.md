@@ -41,6 +41,7 @@
 
 	* [angr初探](/Miscellaneous/angr初探.md)
 	* [ctf笔记](/Miscellaneous/ctf笔记.md)
+	* [常见算法特征总结](/Miscellaneous/算法特征总结.md)
 
 
 * [Linux_Operating_System]()

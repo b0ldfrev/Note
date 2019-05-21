@@ -42,12 +42,14 @@
 	* [angr初探](/Miscellaneous/angr初探.md)
 	* [ctf笔记](/Miscellaneous/ctf笔记.md)
 	* [常见算法特征总结](/Miscellaneous/算法特征总结.md)
+	* [ELF文件笔记](/Miscellaneous/ELF文件笔记.md)
 
 
 * [Linux_Operating_System]()
 
 	* [系统调用](/Linux_Operating_System/系统调用.md)
 	* [分页机制](/Linux_Operating_System/分页机制.md)
+	* [调试原理](/Linux_Operating_System/调试原理.md)
 
 
 * [Linux_Kernel]()

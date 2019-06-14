@@ -182,6 +182,10 @@ $7 = {
 
 改函数指针我们可以填充为one_gadget,这样就不用考虑参数问题；若`one_gadget`的环境变量都不好使，可以考虑填充为system函数地址，传参的话，**多数vtable函数指针在被调用时，会将它的`_IO_FILE_plus`地址当作第一个参数传递**，所以我们可以将`_IO_FILE_plus`的`_flags`成员填成`“/bin/sh\x00”`,但这种方法通常也不好用，因为**调用vtable函数指针之前会对`_IO_FILE_plus`的结构进行检查**，通常改“/bin/sh\x00”之后会导致对`_flags`成员的检查不通过（亲测printf不行，但House of orange利用中出现的`_IO_flush_all_lockp`能检查通过）
 
+## FSOP利用
+
+见我的另一篇文章[https://sirhc.xyz/2018/11/06/House-of-orange/#fsop](https://sirhc.xyz/2018/11/06/House-of-orange/#fsop%E5%8E%9F%E7%90%86)
+
 ## libc_2.24及以上的利用
 
 glibc 2.24 对 `vtable` 做了检测，导致我们不能通过伪造 `vtable` 来执行代码，对 `vtable` 进行校验的函数是 `IO_validate_vtable`

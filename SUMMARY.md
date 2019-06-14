@@ -29,6 +29,9 @@
 	* [Windows下通用ShellCode原理](/Windows_Operating_System/Windows下通用ShellCode原理.md)
 	* [代码注入](/Windows_Operating_System/代码注入.md)
 	* [inline_hook框架](/Windows_Operating_System/inline_hook框架.md)
+	* [MSR_HOOK](/Windows_Operating_System/MSR_HOOK.md)
+	* [x86_call_x64](/Windows_Operating_System/x86_call_x64.md)
+	* [SSDT_HOOK](/Windows_Operating_System/SSDT_HOOK.md)
 
 * [Windows_Kernel]()
 * [Virus_Analysis]()

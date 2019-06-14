@@ -29,11 +29,14 @@
 	* [Windows下通用ShellCode原理](/Windows_Operating_System/Windows下通用ShellCode原理.md)
 	* [代码注入](/Windows_Operating_System/代码注入.md)
 	* [inline_hook框架](/Windows_Operating_System/inline_hook框架.md)
-	* [MSR_HOOK](/Windows_Operating_System/MSR_HOOK.md)
-	* [x86_call_x64](/Windows_Operating_System/x86_call_x64.md)
-	* [SSDT_HOOK](/Windows_Operating_System/SSDT_HOOK.md)
+	* [32位程序调用64位函数原理](/Windows_Operating_System/x86_call_x64.md)
+
 
 * [Windows_Kernel]()
+
+    * [MSR_HOOK](/Windows_Kernel/MSR_HOOK.md)
+    * [SSDT_HOOK](/Windows_Kernel/SSDT_HOOK.md)
+
 * [Virus_Analysis]()
 * [Program]()
 

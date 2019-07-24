@@ -206,15 +206,15 @@ if (__glibc_unlikely (!prev_inuse(nextchunk))){//如果下一个chunk没有标�
 我们在malloc返回的ptr0（chunk 0）开始地方构造的数据：
 
 
-	p32(0) + p32(81) + p32(&chunk0-12) + p32(&chunk0-8) + "A"*(80-4*4) + p32(80) + p32(88)
+	p32(0) + p32(81) + p32(&fake_chunk-12) + p32(&fake_chunk-8) + "A"*(80-4*4) + p32(80) + p32(88)
 
-这样的话将chunk 0的mem空间伪造成一个fake_chunk，其中fake_fd=p32(&chunk0-12) ， fake_bk=p32(&chunk0-8) 这样做的话执行unlink操作时
+这样的话将chunk 0的mem空间伪造成一个fake_chunk，其中fake_fd=p32(&fake_chunk-12) 代表伪造的chunk头在程序内存空间中的地址-12， fake_bk=p32(&fake_chunk-8) 这样做的话执行unlink操作时
 
 ```c
-FD=P->fd = &chunk0-12 ，
-BK=P->bk = &chunk0-8 ，
-FD->bk ，即 *(&chunk0-12+12) = *(&chunk0) = buf[0] = chunk 0 = p 
-BK->fd ，即*(&chunk0-8+8) = *(&chunk0) = buf[0] = chunk 0 = p
+FD=P->fd = &fake_chunk-12 ，
+BK=P->bk = &fake_chunk-8 ，
+FD->bk ，即 *(&fake_chunk-12+12) = *(&fake_chunk) = buf[0] = fake_chunk = p 
+BK->fd ，即*(&fake_chunk-8+8) = *(&fake_chunk) = buf[0] = fake_chunk = p
 ```
 这样就绕过了双向链表检查。
 
@@ -231,14 +231,14 @@ if (__builtin_expect (FD->bk != P || BK->fd != P, 0))
 由于在 chunk 1 前面构造了一个伪造的空闲内存块，当free(chunk[1])时，就会对伪造的空闲内存块进行unlink操作：
 
 ```c
-F = p -> fd;    #F = &chunk0 - 12
-B = p -> bk;    #B = &chunk0- 8
+F = p -> fd;    #F = &fake_chunk - 12
+B = p -> bk;    #B = &fake_chunk- 8
 if (F -> bk == p && B -> fd == p){
-  F -> bk = B;    #即buf[0] = B = &chunk0 - 8
-  B -> fd = F;    #即buf[0] = F = &chunk0 -12
+  F -> bk = B;    #即buf[0] = B = &fake_chunk - 8
+  B -> fd = F;    #即buf[0] = F = &fake_chunk -12
 }
 ```
-从上可知，unlink后，buf[0]存的不再是chunk 0 的起始地址了，而是&chunk0 - 12 即 &buf-12。此时我们只关心buf数组的内存，其布局如下：
+从上可知，unlink后，buf[0]存的不再是ptr0 的地址了，而是&fake_chunk - 12 (即 如下图中的 &buf-12)。此时我们只关心buf数组的内存，其布局如下：
 
 ![pic2]
 

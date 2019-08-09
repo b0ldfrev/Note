@@ -33,3 +33,67 @@
 scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部扩充缓冲区，从而调用init_malloc来分配更大的空间，从而导致malloc_consolidate，合并fast_bin中的空闲chunk。调用栈如图：
 
 ![](../pic/Miscellaneous/3.jpg)
+
+## 程序退出
+
+程序在执行退出流程时，会在ld-x.xx.so这个动态装载器里面调用_dl_fini函数，这个函数，利用方式见下图：
+
+![](../pic/Miscellaneous/4.png)
+
+## calloc绕过 leak
+
+2.23以上libc都适用
+
+```c
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+
+typedef long *longptr;
+
+int main()
+
+{
+longptr v[7];
+long *a,*b,*c;
+
+a=malloc(20);
+b=malloc(20);
+
+memset(b,'A',20);
+/*
+for (int i=0;i<7;i++)
+{
+v[i]=malloc(20);
+}
+
+for (int i=0;i<7;i++)
+{
+free(v[i]);
+}
+*/
+free(b);
+b[-1] |= 2;
+
+c=calloc(1,20);
+
+for (int i=0;i<20;i++)
+{
+printf("%.2x",((char *)c)[i]);
+
+}
+putchar("\n");
+exit(0);
+
+}
+
+```
+
+给fastbin_chunk的size的IS_MAPPED域置1.通过calloc分配到时，不会被清空。
+
+```python
+chris@ubuntu:~$ ./calloc
+00000000000000004141414141414141414141419
+
+
+```

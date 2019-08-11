@@ -42,7 +42,7 @@ scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部�
 
 ## calloc绕过 leak
 
-2.23以上libc都适用
+2.23及 以上libc都适用
 
 ```c
 #include<stdio.h>
@@ -97,3 +97,25 @@ chris@ubuntu:~$ ./calloc
 
 
 ```
+
+## stack_povit
+
+栈迁移到.bss段时，执行system函数会报错，通常使用onegadget
+
+
+## close(1)
+
+```c
+#include<stdio.h>
+void main()
+{
+close(1);
+write(0,"123",3);
+return 0;
+}
+
+```
+
+这时能打印123.
+
+close(1)时获取服务器端flag，利用重定向"cat flag >&0"

@@ -395,6 +395,8 @@ payload += p64(one_gadget)
 
 这里以libc2.23讲解
 
+在setvbuf(stdout,0,2,0)后，输出流被设置成_IONBF(无缓冲）：直接从流中读入数据或直接向流中写入数据，而没有缓冲区。我们就可以利用如下方式：
+
 如图
 
 ![](../pic/other/14.png)

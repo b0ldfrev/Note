@@ -100,7 +100,7 @@ chris@ubuntu:~$ ./calloc
 
 ## stack_povit
 
-栈迁移到.bss段时，执行system函数会报错，通常使用onegadget
+栈迁移到.bss段时，若栈上方(低地址处)有大约0x200字节的空白空间，则执行system函数就不会报错；但我们通常使用onegadget获取shell
 
 
 ## close(1)

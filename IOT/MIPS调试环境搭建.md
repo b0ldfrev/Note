@@ -3,7 +3,7 @@
 
 ## 安装qemu
 
-```javascript
+```ruby
 sudo apt-get install qemu 
 sudo apt-get install qemu-user-static
 sudo apt-get install qemu-system
@@ -17,13 +17,13 @@ sudo apt-get install bridge-utils
 
 安装依赖环境
 
-```javascript
+```ruby
 sudo apt-get install libncurses5-dev
 ```
 
 在[buildroot.org](https://buildroot.org)下载buildroot
 
-```javascript
+```ruby
 tar -zxvf buildroot-2019.02.5.tar.gz
 cd buildroot-2019.02.5
 make clean
@@ -35,7 +35,7 @@ make menuconfig
 
 在`toolchain-->Kernel Headers`选择自己主机的内核版本或者更低的版本，保存退出
 
-```javascript
+```ruby
 sudo make
 ```
 
@@ -45,7 +45,7 @@ sudo make
 
 编译完成之后，写个demo测试一下，用file查看编译好的mips架构文件。
 
-```javascript
+```ruby
 output/host/usr/bin/mipsel-linux-gcc demo.c -o demo
 
 rooth@ubuntu:~$ file demo
@@ -57,14 +57,14 @@ LSB，可以看到是小端序的MIPS程序
 
 ## 用qemu运行编译出的程序
 
-```javascript
+```ruby
 qemu-mipsel demo
 ```
 mipsel这里代表小端序的mips，但是这里可能会报错,这是因为没有对应架构的链接库的问题
 
 在`output/host/mipsel-buildroot-linux-uclibc/sysroot/lib/`目录，敲以下命令：
 
-```javascript
+```ruby
 sudo cp ld-uClibc-1.0.31.so /lib/
 sudo chown -R root:root /lib/ld-uClibc-1.0.31.so
 sudo ln -s /lib/ld-uClibc-1.0.31.so /lib/ld-uClibc.so.0
@@ -77,7 +77,7 @@ sudo ln -s /lib/libuClibc-1.0.31.so /lib/libc.so.0
 
 运行成功
 
-```javascript
+```ruby
 root@ubuntu:~$ qemu-mipsel demo
 hello world !
 
@@ -89,13 +89,13 @@ hello world !
 
 2.先安装`gdb-multiarch`
 
-```javascript
+```ruby
 sudo apt-get install gdb-multiarch
 
 ```
 若找不到`gdb-multiarch`软件包可以在`/etc/apt/sources.list` 添加源
 
-```javascript
+```ruby
 deb http://cz.archive.ubuntu.com/ubuntu cosmic main universe
 ```
 完成后执行`sudo apt-get update`再重新安装
@@ -103,12 +103,12 @@ deb http://cz.archive.ubuntu.com/ubuntu cosmic main universe
 
 3.在一个窗口通过`qemu-mipsel -g [port] [binname]`来指定监听的端口启动程序，然后在另一个终端使用`gdb-multiarch biname`连接该端口进行调试
 
-```javascript
+```ruby
 root@ubuntu:~$ qemu-mipsel -g 9999 demo
 
 ```
 
-```javascript
+```ruby
 root@ubuntu:~$ gdb-multiarch demo
 ......
 ......
@@ -129,7 +129,7 @@ ctf当中有些时候会给so库
 
 所以可以使用chroot，把根目录设置到给出的so库目录下，这样就能加载到题目给的libc库了。不过需要注意的是，如果在这里使用qemu-mips的话还是会报错，因为qemu-mips不是静态编译的，它的运行依赖于本地的其他so库，chroot之后便找不到这些so库了，虽然可以通过ldd查看它所需要的库，并拷贝到相对当前目录下的对应路径下，但是这样太麻烦了，可以直接使用静态编译的版本qemu-mips-static：
 
-```javascript
+```ruby
 sudo chroot . ./qemu-mips-static binname 
 
 ```
@@ -140,7 +140,7 @@ sudo chroot . ./qemu-mips-static binname
  
 写个source文件
 
-```javascript
+```ruby
 sudo brctl addbr virbr0
 sudo ifconfig virbr0 192.168.122.1/24 up
 
@@ -151,20 +151,20 @@ sudo brctl addif virbr0 tap0
 
 2.[下载](https://people.debian.org/~aurel32/qemu/mipsel/)并启动qemu镜像(通常只需下载readme.txt提示的几个配套文件)
 
-```javascript
+```ruby
 sudo qemu-system-mips -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -netdev tap,id=tapnet,ifname=tap0,script=no -device rtl8139,netdev=tapnet -nographic
 
 ```
 输入root/root进入虚拟机，设置ip：
 
-```javascript
+```ruby
 ifconfig eth0 192.168.122.12/24 up
 ```
 接着就可以看到qemu虚拟机和外面的网络互通了
 
 2.如需从主机传输数据，使用
 
-```javascript
+```ruby
 scp -r ./data  root@192.168.122.12:/root/
 
 ```
@@ -172,7 +172,7 @@ scp -r ./data  root@192.168.122.12:/root/
 
 可以[下载](https://github.com/yxshyj/embedded-toolkit)各个架构静态编译的gdbserver，使用gdbserver启动要调试的程序或附加到需要调试的进程上。
 
-```javascript
+```ruby
 # 启动要调试的程序
 root@debian-mips:~# ./gdbserver 0.0.0.0:9999 demo 
 Process demo created; pid = 2379
@@ -187,7 +187,7 @@ Listening on port 9999
 
 接着就可以在qemu外使用gdb-mutiarch来连接该端口进行调试了,同上面——使用qemu用户模式调试
 
-```javascript
+```ruby
 root@ubuntu:~$ gdb-multiarch demo
 ......
 ......
@@ -208,7 +208,7 @@ Remote debugging using 192.168.122.12:9999
 
 在[https://github.com/darkerego/mips-binaries](https://github.com/darkerego/mips-binaries)下载静态编译的socat程序，因为socat可以用来做数据转发，而且很久之前的pwn题也有用socat部署过。把下载好的socat拷贝到qemu虚拟机中，然后使用如下命令：
 
-```javascript
+```ruby
 ./socat tcp-l:9999,fork exec:./demo
 ```
 

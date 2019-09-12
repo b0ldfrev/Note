@@ -46,3 +46,5 @@ goto errout;
 **宏 `fastbin_index(sz)`用于获得 fast bin 在 fast bins 数组中的 index，由于 bin[0]和 bin[1]中
 的chunk不存在，所以需要减2，对于`SIZE_SZ`为4B的平台，将sz除以8减2得到fast bin index，
 对于 SIZE_SZ 为 8B 的平台，将 sz 除以 16 减去 2 得到 fast bin index。**
+
+**同时由于(unsigned int)(sz)的原因，对应64程序只取size的低4字节，所以我们在利用寻找合适size的时候，类似这种情况（0x36b0000000000040）也行，它等同于size=0x40**

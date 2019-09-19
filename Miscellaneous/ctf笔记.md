@@ -23,10 +23,6 @@
 
 [House_of_Roman](https://sirhc.gitbook.io/note/pwn/house_of_roman)
 
-## 构造chunk笔记
-
-构造overlap chunk时，free掉一个构造的chunk,除了要满足下一个chunk的PREV_INUSE域为1，还应当确保堆排序中的topchunk不被破坏，能够正常识别。
-
 ## _IO_FILE_笔记
 程序调用exit 后会遍历 _IO_list_all,调用 _IO_2_1_stdout_ 下的vatable中_setbuf 函数.程序调用 exit 后,会遍历 _IO_list_all ,调用 _IO_2_1_stdout_ 下的 vatable 中 _setbuf 函数.
 

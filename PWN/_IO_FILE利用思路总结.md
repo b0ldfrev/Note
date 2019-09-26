@@ -419,7 +419,9 @@ payload += p64(one_gadget)
 
 ## 利用IO_write_base实现leak
 
-这里以libc2.23讲解
+> Tips: tcache下可利用IO_write_ptr
+
+* libc2.23讲解
 
 puts函数由_IO_puts函数实现，其内部调用_IO_sputn,接着执行_IO_new_file_xsputn,最终会执行_IO_overflow
 
@@ -447,7 +449,7 @@ _IO_puts (const char *str)
 
 ```c
 int
-_IO_new_file_overflow (_IO_FILE *f, int ch)
+_IO_new_file_overflow (FILE *f, int ch)
 {
   if (f->_flags & _IO_NO_WRITES) /* SET ERROR */
     {
@@ -457,25 +459,55 @@ _IO_new_file_overflow (_IO_FILE *f, int ch)
     }
   /* If currently reading or no buffer allocated. */
   if ((f->_flags & _IO_CURRENTLY_PUTTING) == 0 || f->_IO_write_base == NULL)
-    ......
-    ......
+    {
+      /* Allocate a buffer if needed. */
+      if (f->_IO_write_base == NULL)
+        {
+          _IO_doallocbuf (f);
+          _IO_setg (f, f->_IO_buf_base, f->_IO_buf_base, f->_IO_buf_base);
+        }
+      /* Otherwise must be currently reading.
+         If _IO_read_ptr (and hence also _IO_read_end) is at the buffer end,
+         logically slide the buffer forwards one block (by setting the
+         read pointers to all point at the beginning of the block).  This
+         makes room for subsequent output.
+         Otherwise, set the read pointers to _IO_read_end (leaving that
+         alone, so it can continue to correspond to the external position). */
+      if (__glibc_unlikely (_IO_in_backup (f)))
+        {
+          size_t nbackup = f->_IO_read_end - f->_IO_read_ptr;
+          _IO_free_backup_area (f);
+          f->_IO_read_base -= MIN (nbackup,
+                                   f->_IO_read_base - f->_IO_buf_base);
+          f->_IO_read_ptr = f->_IO_read_base;
+        }
+      if (f->_IO_read_ptr == f->_IO_buf_end)
+        f->_IO_read_end = f->_IO_read_ptr = f->_IO_buf_base;
+      f->_IO_write_ptr = f->_IO_read_ptr;
+      f->_IO_write_base = f->_IO_write_ptr;
+      f->_IO_write_end = f->_IO_buf_end;
+      f->_IO_read_base = f->_IO_read_ptr = f->_IO_read_end;
+      f->_flags |= _IO_CURRENTLY_PUTTING;
+      if (f->_mode <= 0 && f->_flags & (_IO_LINE_BUF | _IO_UNBUFFERED))
+        f->_IO_write_end = f->_IO_write_ptr;
     }
   if (ch == EOF)
     return _IO_do_write (f, f->_IO_write_base,
-             f->_IO_write_ptr - f->_IO_write_base); //控制的目标
-  if (f->_IO_write_ptr == f->_IO_buf_end ) /* Buffer is really full */当两个地址相等就不会打印这个段。
+                         f->_IO_write_ptr - f->_IO_write_base);
+  if (f->_IO_write_ptr == f->_IO_buf_end ) /* Buffer is really full */
     if (_IO_do_flush (f) == EOF)
       return EOF;
   *f->_IO_write_ptr++ = ch;
   if ((f->_flags & _IO_UNBUFFERED)
       || ((f->_flags & _IO_LINE_BUF) && ch == '\n'))
     if (_IO_do_write (f, f->_IO_write_base,
-              f->_IO_write_ptr - f->_IO_write_base) == EOF)
+                      f->_IO_write_ptr - f->_IO_write_base) == EOF)
       return EOF;
   return (unsigned char) ch;
 }
+libc_hidden_ver (_IO_new_file_overflow, _IO_file_overflow)
 ```
-当IO_write_ptr与_IO_buf_end不想等的时候就会打印者之间的字符，其中就有可能会有我们需要的leak，我们再接着看一下函数_IO_do_write,这个函数实际调用的时候会用到new_do_write函数，其参数与之前一样。
+这里如果`f->_flags & _IO_CURRENTLY_PUTTING`为零的话，里面的代码会进入`if (f->_IO_read_ptr == f->_IO_buf_end)`分支，将我们设置的_IO_write_base恢复，所以这里要让`f->_flags & _IO_CURRENTLY_PUTTING`为1.程序接下来下来调用输出函数 _IO_do_write，我们再接着看一下函数_IO_do_write,这个函数实际调用的时候会用到new_do_write函数，其参数与之前一样。
 
 
 ```c
@@ -507,7 +539,7 @@ new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
 
 ```
 
-主要看函数的count赋值的那个地方，data=_IO_write_base,size=_IO_write_ptr - _IO_wirte_base就是这之间的距离，然后最后会return的count实现leak。ps：其中为了防止其进入else if 分支需要设置fp->_flags & _IO_IS_APPENDING返回1.
+主要看函数的count赋值的那个地方，data=_IO_write_base,size=_IO_write_ptr - _IO_wirte_base就是这之间的距离，然后最后会return的count实现leak。ps：其中为了防止其进入else if 分支，会对文件指针进行校准，所以我们需要设置fp->_flags & _IO_IS_APPENDING返回1.
 
 在setvbuf(stdout,0,2,0)后，输出流被设置成_IONBF(无缓冲）：直接从流中读入数据或直接向流中写入数据，而没有缓冲区。我们就可以利用如下方式：
 
@@ -519,9 +551,16 @@ new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
 
 将`_IO_2_1_stdout_`的flag填成p64(0xfbad1800)能过printf或者puts的check，其他项随意填充成相同的libc地址即可；
 
-重要的是将`IO_write_base`处的低1字节填充成“\x50”；
+重要的是将`IO_write_base`处的低1字节填充成“\x50”(缩小base的值)；
 
-使其在下次puts时输出我们修改后的_IO_write_base到_IO_write_ptr/_IO_write_end的数据。这样就能泄露libc地址。
+使其在下次puts时输出我们修改后的_IO_write_base到_IO_write_ptr的数据。这样就能泄露libc地址。
 
+* libc2.27-tcache讲解
+ 
+对于存在tcache机制的利用方法其实就很简单了，因为不用像2.23那样必须分配到伪造合适size的chunk，再覆盖stdout，我们可以直接分配到`_IO_write_ptr`,直接覆盖`_IO_write_ptr`低1byte为"\xff"。
 
+这样的话我们不用考虑没有伪造flags的`_IO_CURRENTLY_PUTTING`域，在`_IO_new_file_overflow`函数中进入`if (f->_IO_read_ptr == f->_IO_buf_end)`分支，重置`_IO_write_`指针
 
+也不用考虑进入`new_do_write`函数时，进入`else if (fp->_IO_read_end != fp->_IO_write_base)`分支对文件指针进行校验，因为此时我们没有修改`_IO_read_end ` 与`_IO_write_base`的值。
+
+由于之前我们把`_IO_write_ptr`低1字节覆盖成"\xff"，所以在调用`_IO_SYSWRITE (fp, data, to_do)`时，data是`_IO_wirte_base`(base不变)，to_do是`IO_write_ptr - _IO_wirte_base`(ptr变大了),同样能打印中间的值，所以同样可泄露。

@@ -1,3 +1,4 @@
+>随心情笔记，不定期更新
 
 ## one_gadgets笔记：
 
@@ -117,3 +118,21 @@ return 0;
 这时能打印123.
 
 close(1)时获取服务器端flag，利用重定向"cat flag >&0"
+
+
+
+## off-by-one 构造思路
+
+* 方法一
+
+![](../pic/Miscellaneous/off-by-one1.jpg)
+
+* 方法二
+
+![](../pic/Miscellaneous/off-by-one2.jpg)
+
+* 方法三(非特殊情况不推荐)
+ 
+原理与方法一类似，在能泄露heap地址前提下，直接构造fake_chunk,填好指针，绕过unlink
+
+![](../pic/Miscellaneous/off-by-one3.jpg)

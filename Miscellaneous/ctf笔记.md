@@ -136,3 +136,60 @@ close(1)时获取服务器端flag，利用重定向"cat flag >&0"
 原理与方法一类似，在能泄露heap地址前提下，直接构造fake_chunk,填好指针，绕过unlink
 
 ![](../pic/Miscellaneous/off-by-one3.jpg)
+
+
+## realloc
+
+简化版的realloc，非mmapped分配方式
+
+```c
+__libc_realloc (void *oldmem, size_t bytes)
+
+{
+
+checked_request2size (bytes, nb_szie);
+old_size = chunksize (oldmem);
+
+// 如果oldmem指针为零，相当于free
+if (oldmem = 0) 
+{ 
+	free(oldmem); 
+	return 0;
+}
+
+//  如果old_size大于请求size，那就缩减old_size,如果缩减的size小于当前arch最小chunk的大小(不能切割出一个chunk)，那就直接返回原来的oldmem，剩下的交给用户处理，不多管.
+if (old_size > nb_size)  
+{ 
+old_size=nb_size; 
+if (old_size - nb_size >= 4 * SIZE_SZ) 
+{
+  free( oldmem + nb_size );
+}  
+return oldmem; 
+}
+
+
+// 如果old_size小于请求size，glibc2.23是按照常规malloc分配，2.27是从直接从topchunk分配
+if (old_size < nb_size ) 
+{
+
+	if (glibc==2.23)
+	 {
+		p=malloc(bytes);
+		free(oldmem);
+		return p;
+	 }
+
+	if(glibc==2.27)
+	 {
+		p=topchunk;
+		av->top = chunk_at_offset (nb_size);
+		free(oldmem);
+		return  p;
+	 }
+
+}
+
+}
+
+```

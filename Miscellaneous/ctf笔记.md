@@ -182,10 +182,9 @@ if (old_size < nb_size )
 
 	if(glibc==2.27)
 	 {
-		p=topchunk;
-		av->top = chunk_at_offset (nb_size);
+		p=malloc(bytes); // no_tcache 不会分配tcache里面的chunk
 		free(oldmem);
-		return  p;
+		return p;
 	 }
 
 }

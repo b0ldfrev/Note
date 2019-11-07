@@ -106,6 +106,11 @@ chris@ubuntu:~$ ./calloc
 
 ## close(1)
 
+
+* 对于有write函数调用的情况下.
+
+write函数直接能够将输出重定位到0描述符.
+
 ```c
 #include<stdio.h>
 void main()
@@ -119,7 +124,12 @@ return 0;
 
 这时能打印123.
 
-close(1)时获取服务器端flag，利用重定向"cat flag >&0"
+* 无write函数调用情况下.
+
+由于程序只关闭了文件描述符1，却没有关闭文件描述符0，所以我们可以修改stdout的文件描述符_fileno为0，则可以使得程序再次拥有了输出的能力，这时再调用printf或者puts就能输出了
+
+
+* close(1)时获取服务器端flag，利用重定向"cat flag >&0"
 
 
 
@@ -184,7 +194,7 @@ if (old_size < nb_size )
 
 	if(glibc==2.27)
 	 {
-		p=malloc(bytes); // no_tcache 不会分配tcache里面的chunk
+		p=malloc(bytes); // no_tcache 的_int_malloc不会分配tcache里面的chunk
 		free(oldmem);
 		return p;
 	 }

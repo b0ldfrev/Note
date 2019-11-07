@@ -22,9 +22,11 @@ tags:
 
 <1>  LOCK  和 REPEAT前缀指令：
 
+```
 	LOCK     		F0    锁地址总线，多核同步使用
 	REPNE/REPNZ	        F2   EFLAGS ZF为0 重复执行
 	REP/REPZ		F3     EFLAGS ZF为1 重复执行
+```
 
 <2>  段前缀指令：
 
@@ -296,7 +298,7 @@ ModR/M字段是用来是用来进行内存寻址的，可当地址形如DS:[EAX+
 
 由上，可得出指令编码为 88 84 48 ，再加上偏移12345678，完整的指令编码为88 84 48 12 34 56 78
 
-```python
+```c
 	888448 12345678  | MOV BYTE PTR DS:[EAX+ECX*2+78563412],AL
 ```
 

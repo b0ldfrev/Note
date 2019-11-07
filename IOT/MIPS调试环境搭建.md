@@ -4,6 +4,7 @@
 ## 安装qemu
 
 ```ruby
+
 sudo apt-get install qemu 
 sudo apt-get install qemu-user-static
 sudo apt-get install qemu-system
@@ -65,6 +66,7 @@ mipsel这里代表小端序的mips，但是这里可能会报错,这是因为没
 在`output/host/mipsel-buildroot-linux-uclibc/sysroot/lib/`目录，敲以下命令：
 
 ```ruby
+
 sudo cp ld-uClibc-1.0.31.so /lib/
 sudo chown -R root:root /lib/ld-uClibc-1.0.31.so
 sudo ln -s /lib/ld-uClibc-1.0.31.so /lib/ld-uClibc.so.0

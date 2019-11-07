@@ -16,6 +16,7 @@ int WINAPI MyMessageBox(HWND hWnd,LPCSTR lpText,LPCSTR lpCaption,UINT uType)
 	int ret=((PFNMESSAGEBOX)g_dwOldAddr)(hWnd,lpNewText,lpCaption,uType);
 	return ret;
 }
+
 ```
 2,得到模块基址，并找到该PE模块中IAT表的位置
 

@@ -66,6 +66,7 @@ while ((victim = unsorted_chunks(av)->bk) != unsorted_chunks(av)) {
 		alloc_perturb (p, bytes);
 		return p;
 	}
+
 ```
 
 取出的简化源代码：

@@ -66,6 +66,7 @@ struct _IO_FILE {
 #endif
 
 };
+
 ```
 
 进程中的FILE结构会通过`_chain`域彼此连接形成一个链表，链表头部用全局变量`_IO_list_all`表示，通过这个值我们可以遍历所有的FILE结构。

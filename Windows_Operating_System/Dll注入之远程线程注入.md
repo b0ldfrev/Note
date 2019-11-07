@@ -50,6 +50,7 @@ bool AdjustProcessTokenPrivilege()
     }  
     return true;  
 }  
+
 ```
 
 2.获取宿主进程的pid

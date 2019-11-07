@@ -24,6 +24,7 @@ Fastbins[idx=3,hold_size=0x39-0x48,size=0x50]
 Fastbins[idx=4,hold_size=0x49-0x58,size=0x60] 
 Fastbins[idx=5,hold_size=0x59-0x68,size=0x70] 
 Fastbins[idx=6,hold_size=0x69-0x78,size=0x80]
+
 ```
 
 关于`fastbin_attack`，任意地址分配，对`chunk_size`的检测问题，由于在分配`fastbin_chunk`时，并没有做 `do_check_remalloced_chunk`检查，所以我们分配的`fastbin_chunk` 的size 只需要满足下面条件，就能申请成功

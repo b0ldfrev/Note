@@ -53,6 +53,7 @@ find / -name 'virtualenv.py'
 root@ubuntu:/home/chris# find / -name 'virtualenv.py'
 /usr/lib/python2.7/dist-packages/virtualenv.py
 /usr/local/lib/python2.7/dist-packages/virtualenv.py
+
 ```
 
 9，然后进入所在目录,手动执行py脚本创建虚拟环境

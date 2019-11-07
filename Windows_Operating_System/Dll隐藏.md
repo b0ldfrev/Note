@@ -40,6 +40,7 @@ typedef struct LDR_DATA_TABLE_ENTRY
 	ULONG CheckSum;
 	ULONG TimeDateStamp;
 }LDR_MODULE,*PLDR_MODULE;
+
 ```
 2,获取要隐藏模块基址，内联汇编，找到指向InLoadOrderModuleList头的指针pBeg，pPLD指向下一个模块。
 

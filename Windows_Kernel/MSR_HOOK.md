@@ -12,7 +12,6 @@ mov edx,KUSER_SHARED_SYSCALL
 // cpu初始化时，根据架构不同，KUSER_SHARED_SYSCALL里面的实现的内核函数指针接口也不同,可能是 KiIntSystemCall中断式系统调用 也可能是 KiFastSystemCall快速系统调用
 call [edx]
 ret 0x10
-
 ```
 这里edx保存的是KiFastSystemCall函数，继续跟进KiFastSystemCall函数
 

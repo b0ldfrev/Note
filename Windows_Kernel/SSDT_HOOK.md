@@ -112,8 +112,6 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDriver, PUNICODE_STRING pPath) {
     return STATUS_SUCCESS;
 }
 
-
-
 ```
 
 

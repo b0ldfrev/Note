@@ -43,6 +43,7 @@ if ((unsigned long) (size) >= (unsigned long) (nb + MINSIZE))
 
 ```c
 void *__libc_malloc(size_t bytes)
+
 ```
 
 如果想要用户输入的大小经过内部的 checked_request2size可以得到这样的大小，即

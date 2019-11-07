@@ -4,7 +4,7 @@
 
 ## 0x00 测试代码
 
-```c++
+```c
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
@@ -38,6 +38,7 @@ a->print();
 b->print();
 return 0;
 }
+
 ```
 
 ## 0x01 GDB调试

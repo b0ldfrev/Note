@@ -29,6 +29,7 @@ if ((unsigned long) (nb) <= (unsigned long) (get_max_fast ()))
       return p;
     }
 }
+
 ```
 
 如果所需的 chunk 大小小于等于 fast bins 中的最大 chunk 大小，首先尝试从 fast bins 中

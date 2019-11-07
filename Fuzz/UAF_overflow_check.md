@@ -46,7 +46,7 @@ void main()
 
 {
  signal(SIGSEGV, signal_handler);
- //do();
+ do();
 }
 
 ```

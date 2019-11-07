@@ -25,6 +25,7 @@ dll可执行文件，既不能直接运行，也不能接收消息，它们是�
 __declspec(dllexport) int add(int a, int b){
     return a + b;
 }
+
 ```
 ### 使用模块定义（.def）文件创建dll
 使用def文件创建dll的话就不再需要__declspec(dllexport)，因此将代码写成最原始的样子:

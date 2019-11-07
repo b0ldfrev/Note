@@ -21,6 +21,7 @@ Codename:   precise
  
 root@VirtualBox:~/Desktop$ gcc -v
 gcc version 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5)
+
 ```
 
 测试代码:

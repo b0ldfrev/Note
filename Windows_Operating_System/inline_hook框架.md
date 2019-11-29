@@ -1,4 +1,4 @@
-```
+```c
 char *lpText1;
 ULONG my_esp;
 __declspec(naked) void MyMessageBoxA(

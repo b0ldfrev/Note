@@ -223,3 +223,9 @@ if (old_size < nb_size )
 }
 
 ```
+
+
+## 关于glibc 2.29一些check的绕过
+
+* 增加了free chunk时 附近存在空闲chunk ，合并，对 prev chunk size 的检测，要求当前chunk的`pre_size==附近被合并chunk_size`
+* 增加了tcache_double_free的检测，不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用

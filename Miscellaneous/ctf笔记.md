@@ -27,13 +27,31 @@
 [House_of_Roman](https://sirhc.gitbook.io/note/pwn/house_of_roman)
 
 ## _IO_FILE_笔记
-程序调用exit 后会遍历 _IO_list_all,调用 _IO_2_1_stdout_ 下的vatable中_setbuf 函数.程序调用 exit 后,会遍历 _IO_list_all ,调用 _IO_2_1_stdout_ 下的 vatable 中 _setbuf 函数.
+程序调用exit 后会遍历 _IO_list_all,调用 _IO_2_1_stdout_ 下的vatable中_setbuf 函数.
 
 ## malloc_consolidate笔记
 
 scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部扩充缓冲区，从而调用init_malloc来分配更大的空间，从而导致malloc_consolidate，合并fast_bin中的空闲chunk。调用栈如图：
 
 ![](../pic/Miscellaneous/3.jpg)
+
+## getchar()笔记
+
+getchar() 会申请0x1000的chunk，且使fp->_IO_read_ptr加1
+
+```c
+pwndbg> bt
+
+#0  __GI___libc_malloc (bytes=1024) at malloc.c:2902
+#1  0x00007ffff7a7a1d5 in __GI__IO_file_doallocate (fp=0x7ffff7dd18e0 <_IO_2_1_stdin_>) at filedoalloc.c:127
+#2  0x00007ffff7a88594 in __GI__IO_doallocbuf (fp=fp@entry=0x7ffff7dd18e0 <_IO_2_1_stdin_>) at genops.c:398
+#3  0x00007ffff7a8769c in _IO_new_file_underflow (fp=0x7ffff7dd18e0 <_IO_2_1_stdin_>) at fileops.c:556
+#4  0x00007ffff7a8860e in __GI__IO_default_uflow (fp=0x7ffff7dd18e0 <_IO_2_1_stdin_>) at genops.c:413
+#5  0x00007ffff7a83255 in getchar () at getchar.c:37
+
+
+```
+
 
 ## 程序退出
 

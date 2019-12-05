@@ -154,7 +154,7 @@ sudo brctl addif virbr0 tap0
 2.[下载](https://people.debian.org/~aurel32/qemu/mipsel/)并启动qemu镜像(通常只需下载readme.txt提示的几个配套文件)
 
 ```ruby
-sudo qemu-system-mips -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -netdev tap,id=tapnet,ifname=tap0,script=no -device rtl8139,netdev=tapnet -nographic
+sudo qemu-system-mipsel -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -netdev tap,id=tapnet,ifname=tap0,script=no -device rtl8139,netdev=tapnet -nographic
 
 ```
 输入root/root进入虚拟机，设置ip：
@@ -208,7 +208,7 @@ Remote debugging using 192.168.122.12:9999
 
 现在已经能够用系统模式和用户模式来模拟运行mips程序了，并且可以使用gdbserver来启动或附加到我们要调试的程序上。但是这里还是存在一个问题，就是不能像做正常pwn题那样方便的往程序中输入数据，虽然可以在qemu中手动的输入，但是输入的数据中难免会有不可见字符。
 
-在[https://github.com/darkerego/mips-binaries](https://github.com/darkerego/mips-binaries)下载静态编译的socat程序，因为socat可以用来做数据转发，而且很久之前的pwn题也有用socat部署过。把下载好的socat拷贝到qemu虚拟机中，然后使用如下命令：
+在[https://github.com/darkerego/mips-binaries](https://github.com/darkerego/mips-binaries)(大端)或者[https://github.com/hypn/misc-binaries](https://github.com/hypn/misc-binaries)(小端)下载静态编译的socat程序，因为socat可以用来做数据转发，而且很久之前的pwn题也有用socat部署过。把下载好的socat拷贝到qemu虚拟机中，然后使用如下命令：
 
 ```ruby
 ./socat tcp-l:9999,fork exec:./demo

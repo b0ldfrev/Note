@@ -229,3 +229,109 @@ if (old_size < nb_size )
 
 * 增加了free chunk时 附近存在空闲chunk ，合并，对 prev chunk size 的检测，要求当前chunk的`pre_size==附近被合并chunk_size`
 * 增加了tcache_double_free的检测，不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用
+
+
+## tcache struct攻击
+
+* tcache初始化
+
+```c
+tcache_init(void)
+{
+  mstate ar_ptr;
+  void *victim = 0;
+  const size_t bytes = sizeof (tcache_perthread_struct);
+  if (tcache_shutting_down)
+    return;
+  arena_get (ar_ptr, bytes);
+  victim = _int_malloc (ar_ptr, bytes);
+  if (!victim && ar_ptr != NULL)
+    {
+      ar_ptr = arena_get_retry (ar_ptr, bytes);
+      victim = _int_malloc (ar_ptr, bytes);
+    }
+  if (ar_ptr != NULL)
+    __libc_lock_unlock (ar_ptr->mutex);
+  /* In a low memory situation, we may not be able to allocate memory
+     - in which case, we just keep trying later.  However, we
+     typically do this very early, so either there is sufficient
+     memory, or there isn't enough memory to do non-trivial
+     allocations anyway.  */
+  if (victim)
+    {
+      tcache = (tcache_perthread_struct *) victim;
+      memset (tcache, 0, sizeof (tcache_perthread_struct));
+    }
+}
+
+```
+
+在程序需要进行动态分配时，如果是使用TCACHE机制的话，会先对tcache进行初始化。跟其他bins不一样的是，tcache是用_int_malloc函数进行分配内存空间的，因此tcache结构体是位于heap段，而不是main_arena。通常
+tcache结构体位于堆首的chunk.
+
+```c
+typedef struct tcache_perthread_struct
+{
+  char counts[TCACHE_MAX_BINS];//0x40
+  tcache_entry *entries[TCACHE_MAX_BINS];//0x40
+} tcache_perthread_struct;
+```
+
+tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcache的数量）和0x200(0x40*8)字节的指针数组组成（每8个字节代表相应tache_entry链表的头部指针）。因此整个tcache_perthread_struct结构体大小为0x240。
+
+
+* tcache free
+
+```c
+#if USE_TCACHE
+  {
+    size_t tc_idx = csize2tidx (size);
+    if (tcache
+        && tc_idx < mp_.tcache_bins
+        && tcache->counts[tc_idx] < mp_.tcache_count)//<7
+      {
+        tcache_put (p, tc_idx);
+        return;
+      }
+  }
+#endif
+
+```
+
+在将chunk放入tcahce的时候会检查tcache->counts[tc_idx] < mp_.tcache_count（无符号比较），也就是表示在tacha_entry链表中的tache数量是否小于7个。但值得注意的是，tcache->counts[tc_idx]是放在堆上的，因此如果可以修改堆上数据，可以将其改为较大的数，这样就不会将chunk放入tache了。
+
+
+* tcache malloc
+
+```c
+#if USE_TCACHE
+  /* int_free also calls request2size, be careful to not pad twice.  */
+  size_t tbytes;
+  checked_request2size (bytes, tbytes);
+  size_t tc_idx = csize2tidx (tbytes);
+  MAYBE_INIT_TCACHE ();
+  DIAG_PUSH_NEEDS_COMMENT;
+  if (tc_idx < mp_.tcache_bins
+      /*&& tc_idx < TCACHE_MAX_BINS*/ /* to appease gcc */
+      && tcache
+      && tcache->entries[tc_idx] != NULL)
+    {
+      return tcache_get (tc_idx);
+    }
+  DIAG_POP_NEEDS_COMMENT;
+#endif
+
+```
+
+而在tcache分配时，不会检查tcache->counts[tc_idx]的大小是否大于0，会造成下溢。且没有检测entries处chunk的合法性，我们若能伪造tcache->entries[tc_idx]的tcache_entry指针，那我们就能实现从tcache任意地址分配chunk。
+
+
+## House-of-Corrosion 实现的任意地址写
+
+1. 可以分配较大的堆块（size <=0x3b00)
+2. 通过爆破4bit,改写bk进行unsortedbin attack 改写global_max_fast变量
+3. 通过分配释放特定大小的堆块,记为A **(chunk size = (offset * 2) + 0x20 ，offset为target_addr与fastbinY的offset)**
+`pwndbg>    p (mfastbinptr (*)[10])target_addr - &main_arena.fastbinsY ` **target_addr**为攻击地址
+
+4. ![](../pic/Miscellaneous/5.png)
+5. 所以我们至少可实现任意地址写null,存在UAF时可写任意值.

@@ -326,7 +326,7 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 而在tcache分配时，不会检查tcache->counts[tc_idx]的大小是否大于0，会造成下溢。且没有检测entries处chunk的合法性，我们若能伪造tcache->entries[tc_idx]的tcache_entry指针，那我们就能实现从tcache任意地址分配chunk。
 
 
-## House-of-Corrosion 实现的任意地址写
+## House-of-Corrosion 任意地址写
 
 1. 可以分配较大的堆块（size <=0x3b00)
 2. 通过爆破4bit,改写bk进行unsortedbin attack 改写global_max_fast变量
@@ -335,3 +335,19 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 
 ![](../pic/Miscellaneous/5.jpg)
  所以我们至少可实现任意地址写null,存在UAF时可写任意value.
+
+
+## seccomp 禁用execve/open
+
+大致思路：
+
+1. 用可见字符编写shellcode 调用mmap申请地址，调用read读入32位shellcode
+2. 同时构造用retfq切换到32位模式，跳转到32位shellcode 位置
+3. 按照32位规则调用fp = open("flag")
+4. 保存open函数返回的fp指针，再次调用retfq切换回64模式，跳转到64位shellcode位置
+5. 执行read,write打印flag
+
+注意点：
+
+cs = 0x23代表32位模式，cs = 0x33代表64位模式，retfq有两步操作，ret以及set cs，所以执行retfq会跳转到rsp同时将cs设置为[rsp+0x8]，我们只需要事先在ret位置写入32位的shellcode就可以执行了，但retfq跳转过去的时候程序已经切换成了32位模式，所以地址解析也是以32位的规则来的，所以原先的rsp = 0x7ffe530d01b8会被解析成esp = 0x530d01b8，所以跳过去之后再执行push/pop的指令就会报错，所以在跳转过去后要先平衡好esp的地址，比如执行mov esp,im
+

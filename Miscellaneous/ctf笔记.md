@@ -330,8 +330,8 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 
 1. 可以分配较大的堆块（size <=0x3b00)
 2. 通过爆破4bit,改写bk进行unsortedbin attack 改写global_max_fast变量
-3. 通过分配释放特定大小的堆块,记为A **(chunk size = (offset * 2) + 0x20 ，offset为target_addr与fastbinY的offset)**
+3. 通过分配释放特定大小的堆块,记为A **(chunk size = (offset * 2) + 0x20 ，offset为target_addr与fastbinY的差值)**
 `pwndbg>    p (mfastbinptr (*)[10])target_addr - &main_arena.fastbinsY ` **target_addr**为攻击地址
 
-4. ![](../pic/Miscellaneous/5.png)
-5. 所以我们至少可实现任意地址写null,存在UAF时可写任意值.
+![](../pic/Miscellaneous/5.jpg)
+ 所以我们至少可实现任意地址写null,存在UAF时可写任意value.

@@ -27,7 +27,7 @@
 [House_of_Roman](https://sirhc.gitbook.io/note/pwn/house_of_roman)
 
 ## _IO_FILE_笔记
-程序调用exit 后会遍历 _IO_list_all,调用 _IO_2_1_stdout_ 下的vatable中_setbuf 函数.
+程序调用exit 后会遍历 `_IO_list_all`,调用 `_IO_2_1_stdout_` 下的vatable中`_setbuf` 函数.
 
 ## malloc_consolidate笔记
 
@@ -127,7 +127,7 @@ chris@ubuntu:~$ ./calloc
 
 * 对于有write函数调用的情况下.
 
-write函数直接能够将输出重定位到0描述符.
+write函数直接能够将输出重定位到0或2描述符.
 
 ```c
 #include<stdio.h>
@@ -227,8 +227,10 @@ if (old_size < nb_size )
 
 ## 关于glibc 2.29一些check的绕过
 
-* 增加了free chunk时 附近存在空闲chunk ，合并，对 prev chunk size 的检测，要求当前chunk的`pre_size==附近被合并chunk_size`
-* 增加了tcache_double_free的检测，不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用
+* 在unlink操作前增加了一项检查：free chunk时 附近存在空闲chunk ，合并，对 prev chunk size 的检测，要求当前chunk的`pre_size==附近被合并chunk_size`
+* 增加了tcache_double_free的检测，不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用.也可以可以篡改chunk->key，使其e->key != tcache
+* int_malloc中，使用unsortedbin时，对unsortedbin双向链表的完整性检测，unsortedbin attack不可用
+* 在使用top chunk的时候增加了检查：size要小于等于system_mems，因为House of Force需要控制top chunk的size为-1，不能通过这项检查，所以House of Force不可用
 
 
 ## tcache struct攻击

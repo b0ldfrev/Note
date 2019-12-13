@@ -444,7 +444,7 @@ dl=pdbg.ret2dl_resolve()
 fake_link_map=dl.build_link_map(fake_addr,reloc_index,offset,got_libc_address)
 
 ```
-首先我们需要知道远程服务器glibc版本，没有的话也可以猜猜碰运气，然后算出我们想要执行的gadget`__libc_start_main`的偏移，`build_link_map`方法的参数意思也很明显了，`fake_addr`是我们要基于这个位置生成`fake_link_map`数据，`reloc_index`是我们之后执行`plt_call_gadget`对应的`reloc`
+首先我们需要知道远程服务器glibc版本，没有的话也可以猜猜碰运气，然后算出我们想要执行的gadget距离`__libc_start_main`的偏移，`build_link_map`方法的参数意思也很明显了，`fake_addr`是我们要基于这个位置生成`fake_link_map`数据，`reloc_index`是我们之后执行`plt_call_gadget`对应的`reloc`
 
 最后利用的时候，我们要将生成的`fake_link_map`数据写入`fake_addr`地址处，还将要程序link_map_got表(got+4)中的`link_map`地址写成`fake_addr`地址，最后跳去plt表的`push reloc`指令地址处执行,之前要构造好参数，最后进入`dl_runtime_resolve`函数，根据link_map解析到调用函数，getshell.
 

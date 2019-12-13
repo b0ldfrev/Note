@@ -323,7 +323,7 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 
 ```
 
-而在tcache分配时，不会检查tcache->counts[tc_idx]的大小是否大于0，会造成下溢。且没有检测entries处chunk的合法性，我们若能伪造tcache->entries[tc_idx]的tcache_entry指针，那我们就能实现从tcache任意地址分配chunk。
+而在tcache分配时，不会检查`tcache->counts[tc_idx]`的大小是否大于0，会造成下溢。且没有检测entries处chunk的合法性，我们若能伪造`tcache->entries[tc_idx]`的`tcache_entry`指针，那我们就能实现从tcache任意地址分配chunk。
 
 
 ## House-of-Corrosion 任意地址写
@@ -333,8 +333,11 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 3. 通过分配释放特定大小的堆块,记为A **(chunk size = (offset * 2) + 0x20 ，offset为target_addr与fastbinY的差值)**
 `pwndbg>    p (mfastbinptr (*)[10])target_addr - &main_arena.fastbinsY ` **target_addr**为攻击地址
 
+
+
 ![](../pic/Miscellaneous/5.jpg)
- 所以我们至少可实现任意地址写null,存在UAF时可写任意value.
+
+所以我们至少可实现任意地址写null,存在UAF时可写任意value.
 
 
 ## seccomp 禁用execve/open

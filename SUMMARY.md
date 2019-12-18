@@ -56,6 +56,7 @@
 	* [分页机制](/Linux_Operating_System/分页机制.md)
 	* [调试原理](/Linux_Operating_System/调试原理.md)
 	* [linux无文件执行elf](/Linux_Operating_System/linux无文件执行elf.md)
+	* [egg hunter](/Linux_Operating_System/egg_hunter.md)
 
 
 * [Linux_Kernel]()

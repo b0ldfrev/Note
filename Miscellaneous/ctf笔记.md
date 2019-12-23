@@ -37,7 +37,7 @@ scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部�
 
 ## getchar()笔记
 
-getchar() 会申请0x1000的chunk，且使fp->_IO_read_ptr加1
+如果程序没有setbuf(stdin,0)。getchar() 会开辟一个很大的堆块形成缓冲区，也就是申请0x1000的chunk
 
 ```c
 pwndbg> bt
@@ -52,7 +52,7 @@ pwndbg> bt
 
 ```
 
-
+ getchar()会使fp->_IO_read_ptr加1
 ## 程序退出
 
 程序在执行退出流程时，会在ld-x.xx.so这个动态装载器里面调用_dl_fini函数，这个函数，利用方式见下图：

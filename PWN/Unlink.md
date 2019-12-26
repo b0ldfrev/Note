@@ -247,7 +247,7 @@ if (F -> bk == p && B -> fd == p){
 ## 总结
 
 程序中存在堆溢出且长度可观时，很容易构造出unlink；但是当程序没有长度溢出，或者堆大小固定时，我们可以构造chunk错位（伪造）的方式来构造unlink的空闲chunk；还有就是利用合并后被放入unsortedbin中的chunk，利用UAF
-，对合并前的堆块进行构造。详细见[2018强网杯silent2](https://bbs.pediy.com/thread-247020.htm)和[网鼎杯Pwn之babyheap](https://sirhc.xyz/2018/09/02/%E7%BD%91%E9%BC%8E%E6%9D%AFPwn%E4%B9%8Bbabyheap/)
+，对合并前的堆块进行构造。详细见[2018强网杯silent2](https://bbs.pediy.com/thread-247020.htm)和[网鼎杯Pwn之babyheap](https://b0ldfrev.top/2018/09/02/%E7%BD%91%E9%BC%8E%E6%9D%AFPwn%E4%B9%8Bbabyheap/)
 
 
 ## 参考

@@ -20,11 +20,11 @@
 
 * 开启PIE的情况
 
-利用IO_write_base实现leak，详细见[https://sirhc.gitbook.io/note/pwn/iofile-li-yong-si-lu-zong-jie#li-yong-iowritebase-shi-xian-leak](https://sirhc.gitbook.io/note/pwn/iofile-li-yong-si-lu-zong-jie#li-yong-iowritebase-shi-xian-leak)
+利用IO_write_base实现leak，详细见[https://b0ldfrev.gitbook.io/note/pwn/iofile-li-yong-si-lu-zong-jie#li-yong-iowritebase-shi-xian-leak](https://b0ldfrev.gitbook.io/note/pwn/iofile-li-yong-si-lu-zong-jie#li-yong-iowritebase-shi-xian-leak)
 
 * 无须泄露，全程爆破的方式(不实用)
 
-[House_of_Roman](https://sirhc.gitbook.io/note/pwn/house_of_roman)
+[House_of_Roman](https://b0ldfrev.gitbook.io/note/pwn/house_of_roman)
 
 ## _IO_FILE_笔记
 程序调用exit 后会遍历 `_IO_list_all`,调用 `_IO_2_1_stdout_` 下的vatable中`_setbuf` 函数.

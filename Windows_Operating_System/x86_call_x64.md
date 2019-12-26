@@ -45,7 +45,7 @@ $表示当前地址,call $+5表示,调用用 本地址+5字节后的 子程序
 
 找到模块基地址以后，我们就可以通过PE文件结构去获得我们需要的函数了
 
-具体实现参考这里[https://sirhc.gitbook.io/note/windows_operating_system/windows-xia-tong-yong-shellcode-yuan-li](https://sirhc.gitbook.io/note/windows_operating_system/windows-xia-tong-yong-shellcode-yuan-li),只是PE文件从32到32+，要做部分修改。
+具体实现参考这里[https://b0ldfrev.gitbook.io/note/windows_operating_system/windows-xia-tong-yong-shellcode-yuan-li](https://b0ldfrev.gitbook.io/note/windows_operating_system/windows-xia-tong-yong-shellcode-yuan-li),只是PE文件从32到32+，要做部分修改。
 
 ## 3.自实现传参
 

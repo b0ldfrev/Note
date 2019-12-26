@@ -185,7 +185,7 @@ $7 = {
 
 ## FSOP利用
 
-见我的另一篇文章[https://sirhc.xyz/2018/11/06/House-of-orange/#fsop](https://sirhc.xyz/2018/11/06/House-of-orange/#fsop%E5%8E%9F%E7%90%86)
+见我的另一篇文章[https://b0ldfrev.top/2018/11/06/House-of-orange/#fsop](https://b0ldfrev.top/2018/11/06/House-of-orange/#fsop%E5%8E%9F%E7%90%86)
 
 * 64位的_IO_FILE_plus构造模板：
 

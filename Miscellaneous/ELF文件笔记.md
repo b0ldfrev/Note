@@ -1,5 +1,5 @@
 
-## section 与 segment 的区别
+**section 与 segment 的区别**
 
 section 称为节，是指在汇编源码中经由关键字section 或segment 修饰、逻辑划分的指令或数据区域，汇编器会将这两个关键字修饰的区域在目标文件中编译成节，也就是说“节”最初诞生于目标文件中。
 

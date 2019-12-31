@@ -128,7 +128,7 @@ initial_state.memory.store(bind_addr, data)
 对于更复杂的情况，比如当前位置的一个子函数加载程序后，涉及到从子函数中退出，会用到返回地址，栈帧，我们就必需要手动构造一个完整的栈结构。
 
 
-## hook反调试
+## 反调试与hook
 
 将ptrace函数hook返回0
 
@@ -144,6 +144,7 @@ hook到一些关键函数上，达到控制效果。
 
 ```python
 flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
+
     class my_scanf(angr.SimProcedure):
         def run(self, fmt, ptr): # pylint: disable=arguments-differ,unused-argument
             self.state.mem[ptr].dword = flag_chars[self.state.globals['scanf_count']]
@@ -151,19 +152,13 @@ flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
 
     proj.hook_symbol('__isoc99_scanf', my_scanf(), replace=True)
 
-    sm = proj.factory.simulation_manager()
-    sm.one_active.options.add(angr.options.LAZY_SOLVES)
-    sm.one_active.globals['scanf_count'] = 0
+    simulation.one_active.options.add(angr.options.LAZY_SOLVES)
+    simulation.one_active.globals['scanf_count'] = 0
 
-    # search for just before the printf("%c%c...")
-    # If we get to 0x402941, "Wrong" is going to be printed out, so definitely avoid that.
-    sm.explore(find=0x4028E9, avoid=0x402941)
-
-    # evaluate each of the flag chars against the constraints on the found state to construct the flag
-    flag = ''.join(chr(sm.one_found.solver.eval(c)) for c in flag_chars)
-    return flag
 
 ```
+
+这样程序每次调用scanf时，其实就是在执行my_scanf就会将flag_chars[i]存储到self.state.mem[ptr]当中，这其中ptr参数，其实就是本身scanf函数传递进来的rdi也,为了控制下标，我们设置了一个全局符号变量scanf_count。因为上面演示代码中程序中存在多处scanf输入。
 
 ## 路径探索
 

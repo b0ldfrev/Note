@@ -72,6 +72,7 @@
 * [Fuzz]()
 
 	* [UAF_overflow_check](/Fuzz/UAF_overflow_check.md)
+	* [intel-pin](/Fuzz/intel-pin.md)
 
 * [CVE]()
 * [Assembly]()

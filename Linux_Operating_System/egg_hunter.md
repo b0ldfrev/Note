@@ -19,7 +19,7 @@ Windows下也有类似的函数，如IsBadReadPtr、NtDisplayString函数。
 
 ## 代码
 
-* Linux egg code :
+* x86  egg code :
 
 ```c
 _start:

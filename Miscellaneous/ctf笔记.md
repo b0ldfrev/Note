@@ -35,6 +35,13 @@ scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部�
 
 ![](../pic/Miscellaneous/3.jpg)
 
+因为在分配chunk时 假如最后 top chunk 也不能满足分配要求，就会查看 fast bins 中是否有空闲 chunk ，若存在就调用malloc_consolidate()函数，并重新设置当前 bin 的 index，并转到最外层的循环，尝试重新分
+配 chunk。
+
+同样在释放chunk时，如果当前 free 的 chunk 周围存在空闲堆块，那就合并，如果合并后的 chunk 大小大于 64KB，并且 fast bins 中存在空闲 chunk，则会调用malloc_consolidate()函数合并 fast bins 中的空闲 chunk 到 unsorted bin 中
+
+所以merge top或malloc big chunk，也可触发malloc_consolidate。
+
 ## getchar()笔记
 
 如果程序没有setbuf(stdin,0)。getchar() 会开辟一个很大的堆块形成缓冲区，也就是申请0x1000的chunk
@@ -346,7 +353,7 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 
 大致思路：
 
-1. 用可见字符编写shellcode 调用mmap申请地址，调用read读入32位shellcode
+1. 调用mmap申请地址，调用read读入32位shellcode
 2. 同时构造用retfq切换到32位模式，跳转到32位shellcode 位置
 3. 按照32位规则调用fp = open("flag")
 4. 保存open函数返回的fp指针，再次调用retfq切换回64模式，跳转到64位shellcode位置

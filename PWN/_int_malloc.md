@@ -230,5 +230,7 @@ while ((victim = unsorted_chunks (av)->bk) != unsorted_chunks (av))
 当然如果从所有的 bins 中都没有获得所需的 chunk，可能的情况为 bins 中没有空闲 chunk，
 或者所需的 chunk 大小很大，下一步将尝试从 top chunk 中分配所需 chunk.......
 
+如果 top chunk 也不能满足要求，查看 fast bins 中是否有空闲 chunk 存在，如果 fast bins 中有空闲 chunk 存在，调用malloc_consolidate()函数，并转到最外层的循环，尝试重新分配 small 或large  bin chunk。
 
+如果最后都不行，山穷水尽了，只能调用Sysmalloc()向系统申请内存了。
 

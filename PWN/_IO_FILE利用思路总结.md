@@ -468,6 +468,22 @@ __int64 __fastcall IO_str_overflow(_IO_FILE *fp, unsigned int a2)
 
 ## 利用_IO_buf_end实现write
 
+scanf()函数内部，当_IO_read_ptr >= _IO_read_end时，会最终调用read的系统调用向_IO_buf_base中读入数据。
+
+```c
+  count = _IO_SYSREAD (fp, fp->_IO_buf_base,
+		       fp->_IO_buf_end - fp->_IO_buf_base);
+  if (count <= 0)
+    {
+      if (count == 0)
+	fp->_flags |= _IO_EOF_SEEN;
+      else
+	fp->_flags |= _IO_ERR_SEEN, count = 0;
+  }
+  fp->_IO_read_end += count;
+
+```
+
 有条件的话我们可修改`_IO_2_1_stdin_`的 `_IO_buf_base` 与 `_IO_buf_end `,这样在执行scanf读取数据到缓冲区时，就可以写入东西到`_IO_buf_base`
 
 常见的利用方式就是，利用 unsorted bin attack 去改写file结构体中的某些成员，比如_IO_2_1_stdin_ 中的 _IO_buf_end，这样在 _IO_buf_base 和_IO_buf_end(main_arena+0x58) 存在 __malloc_hook，可以利用scanf函数读取数据填充到该区域，注意尽量不要破坏已有数据。
@@ -487,6 +503,10 @@ payload += p64(libc_base + libc.sym['_IO_file_jumps'])
 payload += "\x00" * (libc.sym['__malloc_hook'] - libc.sym['_IO_2_1_stdin_] - 0xe0) # 0xe0 is sizeof file plus struct
 payload += p64(one_gadget)
 ```
+
+PS:有个地方需要注意，如上方源码`fp->_IO_read_end += count`，当读取数据进入`_IO_buf_base`缓冲区后会导致`_IO_read_end`增大，这样第二次读入时很有可能`_IO_read_ptr < _IO_read_end`,这样就不会往`_IO_buf_base`写数据了，这时想第二次写数据可以多次使用getchar函数(调用一次`_IO_read_ptr`++)，待`_IO_read_ptr`增大到等于`fp->_IO_read_end`时，再次调用scanf往`_IO_buf_base`写数据。
+
+所以还有一种情况就是，任意地址写1null，我们先写`_IO_buf_base`的低1byte为\00，指针恰好指向了stdin内部地址，我们这时调用scanf即可以再次覆写_IO_buf_base为任意地址。之后要用getchar平衡`_IO_read_ptr`指针，待`_IO_read_ptr == _IO_read_end`后即可往任意地址写值。
 
 ## 利用IO_write_base实现leak
 

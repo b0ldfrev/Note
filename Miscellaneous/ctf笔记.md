@@ -31,20 +31,24 @@
 
 ## malloc_consolidate笔记
 
-scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部扩充缓冲区，从而调用init_malloc来分配更大的空间，从而导致malloc_consolidate，合并fast_bin中的空闲chunk。调用栈如图：
+`malloc_consolidate()`函数用于将 fast bins 中的 chunk 合并，并加入 unsorted bin 中。 ptmalloc中会有以下几种情况会调用`malloc_consolidate()`
+
+1. 在`_int_malloc`的while循环之前，分配的 chunk 属于 small bin,如果 small bin 还没有初始化为双向循环链表，则调用`malloc_consolidate()`函数将 fast bins中的 chunk 合并.
+
+2. 在`_int_malloc`的while循环之前，分配的 chunk 属于 large bin，判断当前分配区的 fast bins 中是否包含 chunk，如果存在，调用 `malloc_consolidate()`函数合并 fast bins 中的 chunk
+
+3. 在分配chunk时 假如最后 top chunk 也不能满足分配要求，就会查看 fast bins 中是否有空闲 chunk ，若存在就调用malloc_consolidate()函数，并重新设置当前 bin 的 index，并转到最外层的循环，尝试重新分
+配 chunk。
+
+4. 在释放chunk时，遇到相邻空闲chunk合并或者与topchunk合并，如果合并后的 chunk 大小大于 64KB，并且 fast bins 中存在空闲 chunk，则会调用malloc_consolidate()函数合并 fast bins 中的空闲 chunk 到 unsorted bin 中
+
+一些能触发`malloc_consolidate`的 trick
+
+* scanf时可输入很长一段字符串 "1"*0x1000,这样可以导致scanf内部扩充缓冲区，从而调用init_malloc来分配更大的空间，从而导致malloc_consolidate，合并fast_bin中的空闲chunk。调用栈如图：
 
 ![](../pic/Miscellaneous/3.jpg)
 
-因为在分配chunk时 假如最后 top chunk 也不能满足分配要求，就会查看 fast bins 中是否有空闲 chunk ，若存在就调用malloc_consolidate()函数，并重新设置当前 bin 的 index，并转到最外层的循环，尝试重新分
-配 chunk。
-
-同样在释放chunk时，遇到相邻空闲chunk合并或者与topchunk合并，如果合并后的 chunk 大小大于 64KB，并且 fast bins 中存在空闲 chunk，则会调用malloc_consolidate()函数合并 fast bins 中的空闲 chunk 到 unsorted bin 中
-
-所以merge top或malloc big chunk，也可触发malloc_consolidate。
-
-## getchar()笔记
-
-如果程序没有setbuf(stdin,0)。getchar() 会开辟一个很大的堆块形成缓冲区，也就是申请0x1000的chunk
+* 如果程序没有setbuf(stdin,0)。getchar() 会开辟一个很大的堆块形成缓冲区，也就是申请0x1000的chunk,此时fast_bin中存在chunk，就会调用`malloc_consolidate`合并
 
 ```c
 pwndbg> bt
@@ -59,7 +63,6 @@ pwndbg> bt
 
 ```
 
- getchar()会使fp->_IO_read_ptr加1
 ## 程序退出
 
 程序在执行退出流程时，会在ld-x.xx.so这个动态装载器里面调用_dl_fini函数，这个函数，利用方式见下图：

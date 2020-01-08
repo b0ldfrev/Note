@@ -56,6 +56,7 @@
 	* [调试原理](/Linux_Operating_System/调试原理.md)
 	* [linux无文件执行elf](/Linux_Operating_System/linux无文件执行elf.md)
 	* [egg hunter](/Linux_Operating_System/egg_hunter.md)
+	* [缺失的动态链接库](/Linux_Operating_System/缺失的动态链接库.md)
 
 
 * [Linux_Kernel]()

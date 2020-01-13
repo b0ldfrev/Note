@@ -63,6 +63,7 @@
 * [IOT]()
 
 	* [MIPS调试环境搭建](/IOT/MIPS调试环境搭建.md)
+	* [mips_arm汇编学习](/IOT/mips_arm汇编学习.md)
 
 * [Symbolic_Execution]()
 

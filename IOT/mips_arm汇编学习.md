@@ -200,7 +200,7 @@ jalr       t9   =>puts
 
 1. 寄存器
 
-![](../iot/arm_reg.png)
+![](../iot/arm_reg.jpg)
 
 ```c
 1.a1-a4(参数,结果或者临时寄存器,与r0-r3同意)

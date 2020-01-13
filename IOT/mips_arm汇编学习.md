@@ -19,7 +19,7 @@ WORD(字)：       32bits
 
 2. 寄存器
 
-![](../iot/mips_reg.png)
+![](../pic/iot/mips_reg.png)
 
 3. 指令格式
 
@@ -144,7 +144,7 @@ sw $a0, 0($sp) //将$a0寄存器中的一个word大小的值存入堆栈，且$s
 
 10. 函数调用
 
-![](../iot/mips_call.png)
+![](../pic/iot/mips_call.png)
 
 MIPS O32调用约定规定了执行跳转(调用)指令时，将返回值存储在ra寄存器。所占空间不大于4 byte的参数应该放在从 a0到 a3 的寄存器中，剩下的参数应该依次放到调用者 stack frame 的参数域中，并且在参数域中需要为前四个参数保留栈空间，因为被调用者使用到前四个参数时，是统一的将参数寄存器中的值放入保留的栈空间，再从保留的栈空间里面取值；如果被调用者需要使用 $s0~$s7 这些保留寄存器(saved register)，就必须先将这些保留寄存器的值保存在被调用者 stack frame 的保留寄存器域中，当被调用者返回时恢复这些寄存器值；当被调用者不是叶子函数时，即被调用者中存在对其它函数的调用，需要将 ra (return address) 寄存器  值保存到被调用者 stack frame 的返回值域中；被调用者所需要使用的局部变量，应保存在被调用者 stack frame 的本地变量域中。  
 
@@ -200,7 +200,7 @@ jalr       t9   =>puts
 
 1. 寄存器
 
-![](../iot/arm_reg.jpg)
+![](../pic/iot/arm_reg.jpg)
 
 ```c
 1.a1-a4(参数,结果或者临时寄存器,与r0-r3同意)
@@ -247,7 +247,7 @@ DB 每次传送前地址减1；
 
 4. 堆栈寻址指令
 
-![](../iot/66.png)
+![](../pic/iot/66.png)
 
 第二列中的ED、EA、FD、 FA分别表示empty descend（空递减）、 empty ascend（空递增）、 full descend（满递减）、 full ascend（满递增），其含义是说，如果你采用的是空递减（空递增、满递减、满递增）堆栈的话，入栈操作则使用指令STMED（STMEA、 STMFD、STMFA），出栈操作则使用指令LDMED（LDMEA、LDMFD、LDMFA）。从此你再也不会为你应该使用ia、ib、da还是db来实现出、入栈操作而苦恼了。
 
@@ -267,7 +267,7 @@ BL 是另一个跳转指令，与B指令的功能相同，也实现跳转，不�
 
 ARM与thumb对比：
 
-![](../iot/arm_thumb.png)
+![](../pic/iot/arm_thumb.png)
 
 ARM和Thumb指令集各有自己的优点，取长补短往往会得到最好的性能。
 

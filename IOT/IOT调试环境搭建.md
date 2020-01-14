@@ -1,4 +1,5 @@
->环境Ubuntu 16.04 amd64
+>环境Ubuntu 16.04 amd64 
+>本文主要以MIPS架构为主，ARM架构的搭建同理
 
 
 ## 安装qemu
@@ -14,7 +15,9 @@ sudo apt-get install bridge-utils
 ```
 
 
-## 安装buildroot交叉编译环境
+## 安装交叉编译环境
+
+##### 使用buildroot
 
 安装依赖环境
 
@@ -56,12 +59,60 @@ hello: ELF 32-bit LSB executable, MIPS, MIPS32 version 1 (SYSV), dynamically lin
 
 LSB，可以看到是小端序的MIPS程序
 
+为了方便，后期可以将程序写入环境变量
+
+```python
+vi ~/.bashrc
+#里面加入
+export  PATH=$PATH:/home/bldfrev/arm_little_gcc/output/host/usr/bin/
+
+```
+之后就可以直接使用`mipsel-linux-gcc`命令
+
+##### 使用mipsel-gcc软件包
+
+使用`apt search "mipsel-linux"`搜索，找到相关软件包`gcc-mipsel-linux-gnu`，安装即可
+
+安装好后，即可直接使用`mipsel-linux-gnu-gcc`命令，同时它的相关lib库文件在系统的`/usr`目录下的`mipsel-linux-gnu`文件中。
+
+## 交叉编译静态socat或gdbserver
+
+
+
+>这里以编译gdbserver为例
+
+若后期要进入qemu系统模式调试，网上又找不到理想匹配的静态链接的程序，就只能自己动手编译。
+
+去下载gdb源码[http://ftp.gnu.org/gnu/gdb/](http://ftp.gnu.org/gnu/gdb/)
+
+下载解压后进入“ gdb-<version>/gdb/gdbserver ”目录，使用如下命令编译安装：
+
+```ruby
+root@ubuntu:~$ CC="mipsel-linux-gcc"  ./configure --target=mipsel-linux --host="mipsel-linux" --prefix="/home/b0ldfrev/gdbserver_setup" --disable-build-with-cxx CFLAGS='-fPIC -static'
+
+root@ubuntu:~$ make install 
+```
+这将使用标准的C构建过程`CC="mipsel-linux-gcc"`，也可以在配置时关闭g++`--disable-build-with-cxx`。
+
+CC选项尽量使用buildroot编译出来的`mipsel-linux-gcc`，因为它的内核版本较老;若使用`mipsel-gcc`软件包编译出来的`mipsel-linux-gnu-gcc`来编译gdbserver，这会导致编译出来的gdbserver只能在内核版本较高的系统中运行。
+
+然后，在你通过“ --prefix ”选项指定的路径下，就可以找到编译完成的 gdbserver 了。
+
+
+
+
 ## 用qemu运行编译出的程序
+
+>这里与buildroot为例
+
+尝试运行
 
 ```ruby
 qemu-mipsel demo
 ```
 mipsel这里代表小端序的mips，但是这里可能会报错,这是因为没有对应架构的链接库的问题
+
+定位到buildroot交叉编译出的uclibc链接库
 
 在`output/host/mipsel-buildroot-linux-uclibc/sysroot/lib/`目录，敲以下命令：
 
@@ -85,9 +136,11 @@ hello world !
 
 ```
 
+PS: 如果不想把编译出的libc与ld移入主机的/lib文件夹，也可以在qemu-mipsel后面加参数 `-L "output/host/mipsel-buildroot-linux-uclibc/sysroot/"` 指定环境变量的路径。
+
 ## 使用qemu用户模式调试
 
-1.GDB插件尽量用pwndbg
+1.GDB插件尽量用pwndbg或gef
 
 2.先安装`gdb-multiarch`
 
@@ -135,6 +188,19 @@ ctf当中有些时候会给so库
 sudo chroot . ./qemu-mips-static binname 
 
 ```
+
+5.exp脚本利用+调试
+
+使用命令`socat tcp-l:9999,fork exec: "qemu-mipsel -g 8888 demo"` 创建qemu调试模式I/O的socat端口映射
+
+必须先执行exp脚本再用gdb-multiarch去加载，顺序不能乱。
+
+exp脚本中执行完`p=remote("127.0.0.1",9999)`后就应该调用个input()暂停一下，等待喂给数据；
+
+紧接着再去`gdb-multiarch demo`，附加远程调试`target remote 127.0.0.1:8888`,这时gdb调试窗口停在start函数处；这时可以设置断点，gdb窗口按下c继续执行程序，再去运行exp脚本的shell窗口按下回车，通过脚本进行数据的交互，最后gdb窗口中在断点处断下。
+
+这样其实有点鸡肋，因为只能从头开始调试，不能从进程中间附加上去调试，但这样也解决了的交互数据存在不可见字符的问题，所以还算比较实用的方法。
+
 
 ## 使用qemu系统模式调试
 

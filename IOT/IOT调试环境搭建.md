@@ -140,7 +140,7 @@ PS: 如果不想把编译出的libc与ld移入主机的/lib文件夹，也可以
 
 ## 使用qemu用户模式调试
 
-1.GDB插件尽量用pwndbg或gef
+1.GDB插件尽量用gef(pwndbg也行)
 
 2.先安装`gdb-multiarch`
 

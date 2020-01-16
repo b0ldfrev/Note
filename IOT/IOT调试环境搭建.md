@@ -191,7 +191,7 @@ sudo chroot . ./qemu-mips-static binname
 
 5.exp脚本利用+调试
 
-使用命令`socat tcp-l:9999,fork exec: "qemu-mipsel -g 8888 demo"` 创建qemu调试模式I/O的socat端口映射
+使用命令`socat tcp-l:9999,fork exec:"qemu-mipsel -g 8888 demo"` 创建qemu调试模式I/O的socat端口映射
 
 必须先执行exp脚本再用gdb-multiarch去加载，顺序不能乱。
 

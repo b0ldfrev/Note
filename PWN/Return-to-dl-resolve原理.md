@@ -320,10 +320,10 @@ gdb-peda$ x/x 0x0804a000
 ```python
 import roputils
 rop = roputils.ROP('./bianry')
-dl_resolve_data = rop.dl_resolve_data(base_addr,call_name_addr)
+dl_resolve_data = rop.dl_resolve_data(base_addr,call_name_str)
 dl_resolve_call = rop.dl_resolve_call(dl_resolve_data_addr, arg_addr)
 ```
-`dl_resolve_data`有两个参数，`base_addr`它声明了生成的`dl_resolve_data`数据的地址，因为我们接下来就要想办法将生成的`dl_resolve_data`数据写入这个地址。`call_name_addr`是你想要调用函数名的字符串指针。
+`dl_resolve_data`有两个参数，`base_addr`它声明了生成的`dl_resolve_data`数据的地址，因为我们接下来就要想办法将生成的`dl_resolve_data`数据写入这个地址。`call_name_str`是你想要调用函数名的字符串。
 
 `dl_resolve_call`就是生成劫持地址plt[0]，及reloc参数，和call参数一个`plt_call_gadget`,它的第一个参数是`dl_resolve_data`数据的地址，第二个参数是你想调用函数的参数的地址。
 
@@ -343,13 +343,13 @@ pdbg.local()
 p=pdbg.run("local")
 
 dl=pdbg.ret2dl_resolve()
-correct_addr,resolve_data,resovle_call=dl.build_normal_resolve( base_addr , call_name_addr , resolve_target)
+correct_addr,resolve_data,resovle_call=dl.build_normal_resolve( base_addr , call_name_str , resolve_target)
 ```
 下面解释一下，这个库好像必须调用run方法才能使用`ret2dl_resolve()`.....这里先不管能用就行......
 
 `dl=pdbg.ret2dl_resolve()`是初始化一个对象，可以去研究一下源码，功能是识别binary的架构。
 
-`dl.build_normal_resolve( base_addr , call_name_addr , resolve_target)`关键是这串代码，第一个参数是一个base地址，`build_normal_resolve`方法根据这个地址微调，这是为了构造ndx=0，寻找正确的`symbol_index`,最后返回一个被修正后的`correct_addr`。它的返回值有三个，后两个都是构造好的数据。
+`dl.build_normal_resolve( base_addr , call_name_str , resolve_target)`关键是这串代码，第一个参数是一个base地址，`build_normal_resolve`方法根据这个地址微调，这是为了构造ndx=0，寻找正确的`symbol_index`,最后返回一个被修正后的`correct_addr`。它的返回值有三个，后两个都是构造好的数据。
 
 我们最后使用的时候，要将得到的`resolve_data`数据写入到被修正后的`correct_addr`地址中，它返回的`resovle_call`是一个`plt_call_gadget` 但他不同于roputils生成的，因为他没有把参数封装进去，我们需要自己设置call的参数。
 

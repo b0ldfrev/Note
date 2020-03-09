@@ -48,7 +48,7 @@
 
 ![](../pic/Miscellaneous/3.jpg)
 
-* 如果程序没有setbuf(stdin,0)。getchar() 会开辟一个很大的堆块形成缓冲区，也就是申请0x1000的chunk,此时fast_bin中存在chunk，就会调用`malloc_consolidate`合并
+* 如果程序没有setbuf(stdin,0)也就是没有关闭stdin的缓冲区。getchar() 会开辟一个很大的堆块形成缓冲区，也就是申请0x400的chunk,此时fast_bin中存在chunk，就会调用`malloc_consolidate`合并
 
 ```c
 pwndbg> bt
@@ -132,7 +132,7 @@ chris@ubuntu:~$ ./calloc
 栈迁移到.bss段时，若栈上方(低地址处)有大约0x200字节的空白空间，则执行system函数就不会报错；但我们通常使用onegadget获取shell
 
 
-## close(1)
+## fd相关 close(1)
 
 
 * 对于有write函数调用的情况下.
@@ -150,15 +150,27 @@ return 0;
 
 ```
 
-这时能打印123.
+这时能打印123.原因是0，1，2文件描述符都指向同一个tty文件，如下：
+
+```python
+[master●]#~ file /proc/8642/fd/0
+/proc/8942/fd/0: symbolic link to /dev/pts/18
+[master●]#~ file /proc/8642/fd/1
+/proc/8942/fd/1: symbolic link to /dev/pts/18
+[master●]#~ file /proc/8642/fd/2
+/proc/8942/fd/2: symbolic link to /dev/pts/18
+
+```
 
 * 无write函数调用情况下.
 
 由于程序只关闭了文件描述符1，却没有关闭文件描述符0，所以我们可以修改stdout的文件描述符_fileno为0或2，则可以使得程序再次拥有了输出的能力，这时再调用printf或者puts就能输出了
 
-* 格式化字符串最多只能写0x2000字节，且在利用时可修改程序.bss段中的stdout指针地址为stderr指针，由源码分析，在vprintf的check时刚好能通过，这使得printf再次拥有输出能力
+* close(1)后，格式化字符串最多只能写0x2000字节，这种情况下在利用时可修改程序.bss段中的stdout指针地址为stderr指针，由源码分析，在vprintf的check时刚好能通过，这使得printf再次拥有输出能力
 
 * close(1)时获取服务器端flag，利用重定向"cat flag >&0"
+
+* 再调用scanf时，会取到`_IO_2_1_stdin_`结构的`fileno`,最终汇到底层系统调用read`（_IO_2_1_stdin_.fileno，buf，nbytes）`。所以有些时候如果我们能够控制`IO_stdin`结构的fileno为其它fd，再去调用scanf函数时就可以实现从其它fd读数据。
 
 
 

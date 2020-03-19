@@ -26,7 +26,7 @@
 
 [House_of_Roman](https://b0ldfrev.gitbook.io/note/pwn/house_of_roman)
 
-## _IO_FILE_笔记
+## IO_FILE笔记
 程序调用exit 后会遍历 `_IO_list_all`,调用 `_IO_2_1_stdout_` 下的vatable中`_setbuf` 函数.
 
 ## malloc_consolidate笔记
@@ -246,13 +246,56 @@ if (old_size < nb_size )
 
 ```
 
+## tcache相关
 
-## 关于glibc 2.29一些check的绕过
+tcache_perthread_struct结构体是用来管理tcache链表：
+这个结构体位于heap段的起始位置，且有size：0x251
 
-* 在unlink操作前增加了一项检查：free chunk时 附近存在空闲chunk ，合并，对 prev chunk size 的检测，要求当前chunk的`pre_size==附近被合并chunk_size`
-* 增加了tcache_double_free的检测，不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用.也可以可以篡改chunk->key，使其e->key != tcache
-* int_malloc中，使用unsortedbin时，对unsortedbin双向链表的完整性检测，unsortedbin attack不可用
-* 在使用top chunk的时候增加了检查：size要小于等于system_mems，因为House of Force需要控制top chunk的size为-1，不能通过这项检查，所以House of Force不可用
+```c
+typedef struct tcache_perthread_struct
+{
+  char counts[TCACHE_MAX_BINS];//数组长度64，每个元素最大为0x7，仅占用一个字节（对应64个tcache链表）
+  tcache_entry *entries[TCACHE_MAX_BINS];//entries指针数组（对应64个tcache链表，cache bin中最大为0x400字节
+  //每一个指针指向的是对应tcache_entry结构体的地址。
+} tcache_perthread_struct;
+
+```
+
+一个tcache链表的结构，单个tcache bins默认最多包含7个块。tcache_entry：
+2.26
+
+```c
+typedef struct tcache_entry
+{
+  struct tcache_entry *next;//指向的下一个chunk的fd字段
+} tcache_entry;
+
+```
+
+2.28存在bk字段所有的bk都指向tcache_perthread_struct的fd
+
+```c
+typedef struct tcache_entry
+{
+ //指向tcache的下一个chunk，
+  struct tcache_entry *next;
+  /* 这个字段是用来检测双重free释放的  */
+  struct tcache_perthread_struct *key;
+} tcache_entry;
+
+```
+
+放入tcache bin的情况:
+
+* 释放时，`_int_free`中在检查了size合法后(小于0x400)，放入fastbin之前，它先尝试将其放入tcache
+* 在`_int_malloc`中，若fastbins中取出块则将对应bin中其余chunk填入tcache对应项直到填满（smallbins中也是如此）
+* 当进入unsorted bin(同时发生堆块合并）中找到精确的大小时，并不是直接返回而是先加入tcache中，直到填满：
+
+取tcache bin中的chunk：
+
+* 在`__libc_malloc`，`_int_malloc`之前，如果tcache中存在满足申请需求大小的块，就从对应的tcache中返回chunk
+* 在遍历完unsorted bin(同时发生堆块合并）之后，若是tcache中有对应大小chunk则取出并返回：
+* 在遍历unsorted bin时，大小不匹配的chunk将会被放入对应的bins，若达到`tcache_unsorted_limit`限制且之前已经存入过chunk则在此时取出（默认无限制）：
 
 
 ## tcache struct攻击
@@ -350,6 +393,91 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 而在tcache分配时，不会检查`tcache->counts[tc_idx]`的大小是否大于0，会造成下溢。且没有检测entries处chunk的合法性，我们若能伪造`tcache->entries[tc_idx]`的`tcache_entry`指针，那我们就能实现从tcache任意地址分配chunk。
 
 
+## 关于glibc 2.29一些check的绕过
+
+1.在unlink操作前增加了prevsize的检查机制：在合并的时候会判断prev_size和要合并chunk的size是否相同。
+```c
+/* consolidate backward */
+if (!prev_inuse(p)) {
+  prevsize = prev_size (p);
+  size += prevsize;
+  p = chunk_at_offset(p, -((long) prevsize));
+  if (__glibc_unlikely (chunksize(p) != prevsize))
+    malloc_printerr ("corrupted size vs. prev_size while consolidating");
+  unlink_chunk (av, p);
+}
+
+```
+
+这样导致了常规off-by-null的构造方式失效，但可利用残余在 large bin 上的 fd_nextsize / bk_nextsize 指针，smallbin残留的bk指针，以及fastbin的fd指针 来构造出一个天然的chunk链来绕过size检测与双向链表检测。具体见[https://bbs.pediy.com/thread-257901.htm](https://bbs.pediy.com/thread-257901.htm)
+
+
+
+2.增加了`tcache_double_free`的检测，2.29将每个放入tcache中的chunk->bk(tcache entries的key位)设置为tcache，free时再检测重复chunk。
+
+```c
+/* This test succeeds on double free.  However, we don't 100%
+    trust it (it also matches random payload data at a 1 in
+    2^<size_t> chance), so verify it's not an unlikely
+    coincidence before aborting.  */
+if (__glibc_unlikely (e->key == tcache))
+  {
+    tcache_entry *tmp;
+    LIBC_PROBE (memory_tcache_double_free, 2, e, tc_idx);
+    for (tmp = tcache->entries[tc_idx];
+    tmp;
+    tmp = tmp->next)
+      if (tmp == e)
+  malloc_printerr ("free(): double free detected in tcache 2");
+    /* If we get here, it was a coincidence.  We've wasted a
+        few cycles, but don't abort.  */
+  }
+```
+
+不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用.也可以可以篡改chunk->key，使其e->key != tcache来绕过
+
+
+
+3.`_int_malloc`中，使用`unsortedbin_attack`时，增加了对unsortedbin双向链表的完整性检测，导致`unsortedbin_attack`不可用.
+
+```c
+/* remove from unsorted list */
+if (__glibc_unlikely (bck->fd != victim))
+  malloc_printerr ("malloc(): corrupted unsorted chunks 3");
+unsorted_chunks (av)->bk = bck;
+bck->fd = unsorted_chunks (av);
+
+```
+
+但有另外的地方可利用，照样可实现任意地址写一个libc地址。原理是当从small bin中申请出chunk时，会将small bin剩余的chunk放入到tcache中，但并没有对其进行完整性检测，而且在unlink过程中会写入一个libc范围的地址(当然这个洞在引入tcache时的glibc版本就已经存在)。
+
+```c
+/* While bin not empty and tcache not full, copy chunks over.  */
+while (tcache->counts[tc_idx] < mp_.tcache_count
+  && (tc_victim = last (bin)) != bin)
+{
+	if (tc_victim != 0)
+	    {
+	      bck = tc_victim->bk;
+	      set_inuse_bit_at_offset (tc_victim, nb);
+	      if (av != &main_arena)
+		set_non_main_arena (tc_victim);
+	      bin->bk = bck;
+	      bck->fd = bin;
+	      tcache_put (tc_victim, tc_idx);
+        }
+}
+
+```
+
+
+
+4.在使用top chunk的时候增加了检查：size要小于等于system_mems，因为House of Force需要控制top chunk的size为-1，不能通过这项检查，所以House of Force不可用
+
+
+
+
+
 ## House-of-Corrosion 任意地址写
 
 1. 可以分配较大的堆块（size <=0x3b00)
@@ -364,7 +492,7 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 所以我们至少可实现任意地址写null,存在UAF时可写任意value.
 
 
-## seccomp 禁用execve/open
+## seccomp 没禁用架构
 
 大致思路：
 

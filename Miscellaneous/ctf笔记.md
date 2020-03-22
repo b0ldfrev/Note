@@ -413,7 +413,29 @@ if (!prev_inuse(p)) {
 
 
 
-2.增加了`tcache_double_free`的检测，2.29将每个放入tcache中的chunk->bk(tcache entries的key位)设置为tcache，free时再检测重复chunk。
+2.增加了`tcache_double_free`的检测，2.29将每个放入tcache中的chunk->bk(也是tcache entries结构的key位)设置为tcache。
+
+
+```c
+
+void
+tcache_put (mchunkptr chunk, size_t tc_idx)
+{
+  tcache_entry *e = (tcache_entry *) chunk2mem (chunk);
+  assert (tc_idx < TCACHE_MAX_BINS);
+
+  /* Mark this chunk as "in the tcache" so the test in _int_free will
+     detect a double free.  */
+  e->key = tcache;
+
+  e->next = tcache->entries[tc_idx];
+  tcache->entries[tc_idx] = e;
+  ++(tcache->counts[tc_idx]);
+}
+
+
+```
+在释放tcache中的chunk时，只根据相应的tc_idx检测重复chunk
 
 ```c
 /* This test succeeds on double free.  However, we don't 100%
@@ -434,7 +456,7 @@ if (__glibc_unlikely (e->key == tcache))
   }
 ```
 
-不过可以通过将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用.也可以可以篡改chunk->key，使其e->key != tcache来绕过
+绕过方式：可以将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用；也可以篡改chunk->key，使其e->key != tcache来绕过
 
 
 

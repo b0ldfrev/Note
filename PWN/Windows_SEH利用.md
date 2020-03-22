@@ -242,6 +242,6 @@ mov     [ebp-1Ch], eax  //GS
 
 ```
 
-存入栈ebp-0x1c的GS值 也需要先leak出ebp与`___security_cookie`值后 再计算`new_GS=___security_cookie ^ ebp` 覆盖。
+覆盖存入栈ebp-0x1c的GS值时也应该注意这点， 也需要先leak出ebp与`___security_cookie`值后 再计算`new_GS=___security_cookie ^ ebp`的值 再进行覆盖。
 
 所以要实现这种SEH利用，要泄露的地方其实挺多的。

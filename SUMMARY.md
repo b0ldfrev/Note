@@ -18,6 +18,7 @@
     * [利用main_arena泄露libc基址](/PWN/利用main_arena泄露libc基址.md)
     * [整数溢出](/PWN/整数溢出.md)
     * [重写.fini_array函数指针](/PWN/重写.fini_array函数指针.md)
+    * [Windows_SEH利用](/PWN/Windows_SEH利用.md)
 
 * [Windows_Operating_System]()
 
@@ -29,7 +30,7 @@
 	* [inline_hook框架](/Windows_Operating_System/inline_hook框架.md)
 	* [32位程序调用64位函数原理](/Windows_Operating_System/x86_call_x64.md)
 	* [调试原理](/Windows_Operating_System/调试原理.md)
-
+    * [Windows_SEH利用](/PWN/Windows_SEH利用.md)
 
 * [Windows_Kernel]()
 

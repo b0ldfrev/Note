@@ -122,7 +122,7 @@ typedef struct _EXCEPTION_REGISTRATION_RECORD{
 
 结构如图所示：
 
-![https://s2.ax1x.com/2019/10/09/uI9Auq.png](https://s2.ax1x.com/2019/10/09/uI9Auq.png)
+![异常处理过程](https://s2.ax1x.com/2019/10/09/uI9Auq.png)
 
 >fs寄存器指向TEB结构
 

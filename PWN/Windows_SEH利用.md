@@ -65,6 +65,7 @@ struct _EH4_SCOPETABLE_RECORD {
 
 ```
 
+其中`FilterFunc`与`FinallyFunc`就是我们自定义的`__except` 或 `__finally`函数的地址。
 
 
 紧接着下面三条指令，作用是在栈中为当前线程添加异常处理。
@@ -219,7 +220,7 @@ int __cdecl _except_handler4_common(unsigned int *securityCookies, void (__fastc
 ```
 
 
-里面会检查栈中放入的GS值，会根据securityCookies解密`_EH4_SCOPETABLE`的地址,最终会调用到`_EH4_SCOPETABLE`里面的FilterFunc与FilterFunc函数。
+里面会检查栈中放入的GS值，会根据securityCookies解密`_EH4_SCOPETABLE`的地址,最终会调用到`_EH4_SCOPETABLE`里面的FilterFunc与FilterFunc函数，也就是我们自定义的`__except` 或 `__finally`函数的地址。
 
 如果我们能够查询伪造一个`_EH4_SCOPETABLE`结构，里面的FilterFunc函数指针写成自己的，其他字段不改变，覆盖栈中的`_EH4_SCOPETABLE_addr`为伪造地址，就能实现任意地址函数调用。
 

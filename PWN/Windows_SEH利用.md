@@ -1,6 +1,6 @@
 >windows栈溢出部分关于SEH的利用
 
-先看一个编译好的程序main函数入口处代码。
+先看一个编译好的程序main函数入口处代码。SEH 的使用范围是线程相关的，每个线程都有自己的函数（SEH链表是局部链表，在堆栈中）
 
 ```python
 
@@ -126,7 +126,7 @@ typedef struct _EXCEPTION_REGISTRATION_RECORD{
 
 >fs寄存器指向TEB结构
 
-所以 上面`lea eax, [ebp-10h]`与`mov large fs:0, eax`指令也就是在栈中插入一个异常处理结构体到TIB顶部, `__except_handler4`就是添加的系统默认异常处理回调函数，当发生异常时会首先执行它。
+所以 上面`lea eax, [ebp-10h]`与`mov large fs:0, eax`指令也就是在栈中插入一个SEH异常处理结构体到TIB顶部, `__except_handler4`就是添加的系统默认异常处理回调函数，当发生异常时会首先执行它。
 
 我们跟进`__except_handler4`中
 

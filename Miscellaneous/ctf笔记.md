@@ -471,7 +471,11 @@ bck->fd = unsorted_chunks (av);
 
 ```
 
-但有另外的地方可利用，照样可实现任意地址写一个libc地址。原理是当从small bin中申请出chunk时，会将small bin剩余的chunk放入到tcache中，但并没有对其进行完整性检测，而且在unlink过程中会写入一个libc范围的地址(当然这个洞在引入tcache时的glibc版本就已经存在)。
+但有另外的地方可利用，`unsortedbin_attack`无非就是往一个地址写一个值，如果只是为了改例如`global_max_fast`,那`largebin_attack`完全可以替代，只不过写入的是堆地址.
+
+如果要达到写libc地址，也可以，有师傅把它叫做**tcache stash unlink attack plus**，利用过程大致就是将`smallbin_chunk`的bk指针改成`target-2*size_t`（target为攻击的地址）,**前提条件**是`target->bk`也就是`target+3*size_t`为一个可写地址。
+
+原理是当从small bin中申请出chunk时，会将small bin剩余的chunk放入到tcache中，但并没有对其进行完整性检测，而且在unlink过程中会任意地址`target`写入一个`main_arena`的地址(当然这个洞在引入tcache时的glibc版本就已经存在)。
 
 ```c
 /* While bin not empty and tcache not full, copy chunks over.  */
@@ -492,6 +496,7 @@ while (tcache->counts[tc_idx] < mp_.tcache_count
 
 ```
 
+接上面，值得注意的是，由于smallbin摘链后chunk全部进入tcache，所以tcache对应idx入口处的chunk是`target_chunk`。如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。
 
 
 4.在使用top chunk的时候增加了检查：size要小于等于system_mems，因为House of Force需要控制top chunk的size为-1，不能通过这项检查，所以House of Force不可用

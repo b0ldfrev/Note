@@ -29,6 +29,12 @@
 ## IO_FILE笔记
 程序调用exit 后会遍历 `_IO_list_all`,调用 `_IO_2_1_stdout_` 下的vatable中`_setbuf` 函数.
 
+## glibc缺陷
+
+glibc缺陷 : 对于未开启tcache版本来说，只要释放chunk大小在fastbin范围，那就不检查当前释放这个chunk是否已经free（通常检测下一个相邻chunk的prev_size位），就直接将其放入fastbin；
+
+对于开启tcache版本来说，只要tcache中有空，那就不检查当前释放这个chunk是否已经free（通常检测下一个相邻chunk的prev_size位），并直接将其放入tcache中。对于开启tcache这种情况，相对来说就会更危险，我们很容易构造堆风水来实现进一步利用。
+
 ## malloc_consolidate笔记
 
 `malloc_consolidate()`函数用于将 fast bins 中的 chunk 合并，并加入 unsorted bin 中。 ptmalloc中会有以下几种情况会调用`malloc_consolidate()`
@@ -456,7 +462,7 @@ if (__glibc_unlikely (e->key == tcache))
   }
 ```
 
-绕过方式：可以将同一个tcache_chunk放入不同的tcache_bin中来重新实现利用；也可以篡改chunk->key，使其e->key != tcache来绕过
+绕过方式：可以将同一个tcache_chunk放入不同的tcache_bin或其他bin中来重新实现利用（这种方式见House_of_botcake）；也可以篡改chunk->key，使其e->key != tcache来绕过
 
 
 

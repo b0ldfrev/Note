@@ -150,6 +150,8 @@ KPTI中每个进程有两套页表——内核态页表与用户态页表(两个
 
 ![](../pic/page/3.jpg)
 
+开启KPTI后，再想提权就比较有局限性，比如我们常用的ret2usr方式在KPTI下将成为过去时。
+
 #### swap CR3
 
 下面我们来看一个开启KPTI内核的`entry_SYSCALL_64`函数
@@ -424,7 +426,7 @@ rsp  ---->  mov_rdi_rsp
             rip
             cs
             rflags
-            sp
+            rsp
             ss
 ```
 

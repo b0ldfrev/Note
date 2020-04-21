@@ -435,8 +435,13 @@ rsp  ---->  mov_rdi_rsp
 # 0x3 Reference
 
 [如何检查我的Ubuntu上是否启用了KPTI？ ](https://ubuntuqa.com/article/1242.html)
+
 [【内核漏洞利用】TokyoWesternsCTF-2019-gnote Double-Fetch](https://mp.weixin.qq.com/s?__biz=MzI2ODM4NzUyNQ==&mid=2247484029&idx=1&sn=f6bfec08b43c75ca7af6bd12f4999113&chksm=eaf117d7dd869ec1eee66d75abac5d38112b7a63c3bf28edc32960c60d74541a75bb2e4dfe9d&mpshare=1&scene=23&srcid=&sharer_sharetime=1585655592580&sharer_shareid=85875ea7087d5e89ec671378652f4aac#rd)
+
 [Linux系统调用过程分析](https://zhuanlan.zhihu.com/p/79236207?from_voters_page=true)
+
 [KPTI补丁分析_运维_Linux阅码场](https://blog.csdn.net/juS3Ve/article/details/79544927)
+
 [内核页表隔离](https://baike.baidu.com/item/%E5%86%85%E6%A0%B8%E9%A1%B5%E8%A1%A8%E9%9A%94%E7%A6%BB/22785908?fr=aladdin)
+
 [https://www.felixcloutier.com/x86](https://www.felixcloutier.com/x86)

@@ -27,21 +27,45 @@ Fastbins[idx=6,hold_size=0x69-0x78,size=0x80]
 
 ```
 
-关于`fastbin_attack`，任意地址分配，对`chunk_size`的检测问题，由于在分配`fastbin_chunk`时，并没有做 `do_check_remalloced_chunk`检查，所以我们分配的`fastbin_chunk` 的size 只需要满足下面条件，就能申请成功
+关于`fastbin_attack`，任意地址分配，对`chunk_size`的检测问题，由于在分配`fastbin_chunk`时，并没有做 `do_check_remalloced_chunk`检查，所以我们分配的`fastbin_chunk` 的size 只需要满足一定条件，就能申请成功
 
 直接上源码：
 
 
 ```c
-if (*fb != NULL
-&&  __builtin_expect ( fastbin_index( chunksize(*fb)) != idx, 0))
+_int_malloc(mstate av, size_t bytes)
 {
-errstr = "invalid fastbin entry (free)";
-goto errout;
-}
 
-#define  fastbin_index(sz) \
-((((unsigned int)(sz)) >> (SIZE_SZ == 8 ? 4 : 3)) - 2)
+checked_request2size(bytes, nb);
+/*checked_request2size()函数将需要分配的内存大小 bytes 转换为需要分配的 chunk 大小
+nb。Ptmalloc 内部分配都是以 chunk 为单位，根据 chunk 的大小，决定如何获得满足条件的
+chunk。*/
+
+if ((unsigned long)(nb) <= (unsigned long)( get_max_fast ())) {
+idx =  fastbin_index(nb);
+mfastbinptr* fb = & fastbin (av, idx);
+/*首先根
+据所需 chunk 的大小获得该 chunk 所属 fast bin 的 index，根据该 index 获得所需 fast bin 的空
+闲 chunk 链表的头指针.*/
+victim = *fb;
+if (victim != 0) {
+if ( __builtin_expect ( fastbin_index ( chunksize (victim)) != idx, 0))
+{ /*将头指针的下一个 chunk 作为空闲 chunk 链表的头部,不为零代表里面有chunk，
+检查size对应的fastbin_index */
+errstr = "malloc(): memory corruption (fast)";
+errout:
+malloc_printerr (check_action, errstr,  chunk2mem (victim));
+return NULL;
+}  
+
+```
+
+关键的宏定义
+
+```c
+#define  fastbin_index(sz) \((((unsigned int)(sz)) >> (SIZE_SZ == 8 ? 4 : 3)) - 2)
+
+
 ```
 
 **宏 `fastbin_index(sz)`用于获得 fast bin 在 fast bins 数组中的 index，由于 bin[0]和 bin[1]中

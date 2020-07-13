@@ -193,13 +193,15 @@ sudo chroot . ./qemu-mips-static binname
 
 使用命令`socat tcp-l:9999,fork exec:"qemu-mipsel -g 8888 demo"` 创建qemu调试模式I/O的socat端口映射
 
-必须先执行exp脚本再用gdb-multiarch去加载，顺序不能乱。
+必须先执行exp脚本再用gdb-multiarch去attach，顺序不能乱。
 
 exp脚本中执行完`p=remote("127.0.0.1",9999)`后就应该调用个input()暂停一下，等待喂给数据；
 
 紧接着再去`gdb-multiarch demo`，附加远程调试`target remote 127.0.0.1:8888`,这时gdb调试窗口停在start函数处；这时可以设置断点，gdb窗口按下c继续执行程序，再去运行exp脚本的shell窗口按下回车，通过脚本进行数据的交互，最后gdb窗口中在断点处断下。
 
 这样其实有点鸡肋，因为只能从头开始调试，不能从进程中间附加上去调试，但这样也解决了的交互数据存在不可见字符的问题，所以还算比较实用的方法。
+
+当然还有更简单的方法，可以直接在python脚本里面 `p=process(["qemu-mipsel","-g","8888","-L","./","./demo"])` ，这样也可以直接通过pwntools映射I/O流，解决调试时数据交互问题。
 
 
 ## 使用qemu系统模式调试

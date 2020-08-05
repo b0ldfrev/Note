@@ -314,6 +314,8 @@ gdb-peda$ x/x 0x0804a000
 
 * roputils
 
+**32位构造使用方法：**
+
 以前被人们使用频率最高的是roputils库，他的ROP里面的子方法`dl_resolve_data`与`dl_resolve_call`，可以生成伪造符号信息与call时的reloc偏移
 
 使用方法：
@@ -328,6 +330,29 @@ dl_resolve_call = rop.dl_resolve_call(dl_resolve_data_addr, arg_addr)
 `dl_resolve_call`就是生成劫持地址plt[0]，及reloc参数，和call参数一个`plt_call_gadget`,它的第一个参数是`dl_resolve_data`数据的地址，第二个参数是你想调用函数的参数的地址。
 
 **缺陷**：roputils库没能很好的设置`reloc->r_info`，这会使得`ndx = vernum[ELFW(R_SYM) (reloc->r_info)] & 0x7fff`偏大，在有些情况下会导致`version = &l->l_versions[ndx]`出现访存错误,下面介绍的pwndbg库解决了这个问题，它伪造的reloc->r_info，使得ndx为0，即vernum[reloc->r_info]为0。
+
+**64位构造使用方法：**
+
+```c
+const struct r_found_version *version = NULL;
+
+if (l->l_info[VERSYMIDX(DT_VERSYM)] != NULL)   // [r10+0x1c8] != 0
+{
+  const ElfW(Half) *vernum = (const void *) D_PTR (l, l_info[VERSYMIDX (DT_VERSYM)]);
+  ElfW(Half) ndx = vernum[ELFW(R_SYM) (reloc->r_info)] & 0x7fff;
+  version = &l->l_versions[ndx];
+  if (version->hash == 0)
+    version = NULL;
+}
+```
+由于64位程序的利用需要往link_map+0x1c8的位置写0，所以直接避免了了32位程序用roputils库构造的r_info缺陷。
+
+构造的话和之前的脚本代码一样，roputils.ROP方法自动识别程序架构，唯一不同的是`dl_resolve_call`函数的参数只有一个，没有调用函数的参数，因为调用函数的参数需要你用寄存器传递。
+
+早期有人说这种利用方法很鸡肋：“使得l->l_info[VERSYMIDX (DT_VERSYM)] != NULL这句话不成立来绕过该段代码，即使得l->l_info[VERSYMIDX (DT_VERSYM)]等于NULL，即使得(link_map + 0x1c8) 处为 NULL。这就使问题变成了往link_map写空值，由于link_map在ld.so中，还需要通过got表泄露其地址。因此实现64位的上述方法的ret2dl_resolve，需要泄露与地址写两个漏洞，如果有这两个漏洞我们应该可以使用更轻松的方法来get shell，因此价值不大。”
+
+但是那些人忘了，在完全很冷门glibc的远程环境下，你能泄露地址你也不一定得出一些有用信息，你也猜不出函数偏移，所以我们只能利用这一种方式来getshell。
+
 
 * pwn_debug
 
@@ -376,9 +401,9 @@ if (__builtin_expect (ELFW(ST_VISIBILITY) (sym->st_other), 0) == 0)
         version = NULL;
     }
 ```
-早期有一种很鸡肋的利用方法，就是使得l->l_info[VERSYMIDX (DT_VERSYM)] != NULL这句话不成立来绕过该段代码，即使得l->l_info[VERSYMIDX (DT_VERSYM)]等于NULL，即使得(link_map + 0x1c8) 处为 NULL。这就使问题变成了往link_map写空值，由于link_map在ld.so中，还需要泄露地址。因此实现64位的上述方法的ret2dl_resolve，需要泄露与地址写两个漏洞，如果有这两个漏洞我们应该可以使用更轻松的方法来get shell，因此价值不大。
 
-那么是否还有其他方法？可以看到该段代码还有一个条件if (__builtin_expect (ELFW(ST_VISIBILITY) (sym->st_other), 0) == 0)，我们是否可构造sym->st_other使它不为空，从而绕过该段代码，我们看假设sym->st_other使它不为空，dl_fixup的代码流程：
+
+可以看到该段代码还有一个条件if (__builtin_expect (ELFW(ST_VISIBILITY) (sym->st_other), 0) == 0)，我们是否可构造sym->st_other使它不为空，从而绕过该段代码，我们看假设sym->st_other使它不为空，dl_fixup的代码流程：
 
 ```c
 _dl_fixup (struct link_map *l, ElfW(Word) reloc_arg)

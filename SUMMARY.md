@@ -11,7 +11,7 @@
     * [house_of_force](/PWN/house_of_force.md)
     * [House_of_Roman](/PWN/House_of_Roman.md)
     * [Linux_ShellCode](/PWN/Linux_ShellCode.md)
-    * [Return-to-dl-resolve原理](/PWN/Return-to-dl-resolve原理.md)
+    * [Return-to-dl-resolve原理及利用](/PWN/Return-to-dl-resolve原理及利用.md)
     * [Unlink利用原理](/PWN/Unlink.md)
     * [Unsorted_Bin_Attack](/PWN/Unsorted_Bin_Attack.md)
     * [获取libc方法](/PWN/获取libc方法.md)

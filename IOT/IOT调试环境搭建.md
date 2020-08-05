@@ -232,6 +232,15 @@ ifconfig eth0 192.168.122.12/24 up
 ```
 接着就可以看到qemu虚拟机和外面的网络互通了
 
+也可以这样启动镜像：
+```
+qemu-system-mips64el -M malta -kernel vmlinux-3.2.0-4-5kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1" -netdev user,id=net0 -device e1000,netdev=net0,id=net0,mac=52:54:00:c9:18:27 -redir tcp:11022::22 -redir tcp:11000::11000  -nographic```
+
+这样就可以与guest虚拟机ssh连接了，而且guest虚拟机可以连接互联网
+
+`ssh -p 11022 root@127.0.0.1`
+
+
 2.如需从主机传输数据，使用
 
 ```ruby

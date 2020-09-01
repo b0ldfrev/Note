@@ -297,4 +297,9 @@ Remote debugging using 192.168.122.12:9999
 
 可以创建一个sh文件，把socat命令写到该文件中，然后以后台方式&运行该sh文件，主机连接到socat后在脚本raw_input()处停下，这时就可以在qemu系统中查看pid，`gdbserver 0.0.0.0：[port] --attach [pid]`附加上去。在主机就可以使用gdb-multiarch调试了
 
+## 模拟设备
+
+解固件包，若有加密，参照[路由器加密固件的解密](https://mp.weixin.qq.com/s?__biz=MzI0MDY1MDU4MQ==&mid=2247498141&idx=2&sn=2fd0ab42f93f5ec5a438ea613c40d80f&chksm=e91529a7de62a0b1c6ea7988aa6d536130f013955f92c781158fb88af7d04534777d59892fee&mpshare=1&scene=24&srcid=0826BqAwKL49eUcT1z43Xbrj&sharer_sharetime=1598408704438&sharer_shareid=f04a963f2d52f62a108ba2405d28bd38#rd)
+
+解密后在binwalk提取出文件系统，将设备文件目录拖入对应的qemu系统模式，在文件目录执行chroot . /bin/sh。根据服务的报错信息，通过`LD_RELOAD` hook对应函数。
 

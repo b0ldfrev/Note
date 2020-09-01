@@ -2,13 +2,24 @@
 
 ## one_gadgets笔记：
 
-改malloc_hook为one_gadgets,一般malloc触发的方式，one_gadgets由于限制条件不满足，执行都不会成功，可以考虑free两次造成double free，调用malloc_printerr触发，恰好[esp+0x50]=0
+1.改malloc_hook为one_gadgets,一般malloc触发的方式，one_gadgets由于限制条件不满足，执行都不会成功，可以考虑free两次造成double free，调用malloc_printerr触发，恰好[esp+0x50]=0(当向非标准IO函数向缓冲流输出或输入的数据过大时，往往会先预先给数据分配内存。比如printf/scanf-打印/输入字符串过长时会触发malloc)
 
 
-在地址上__malloc_hook与__realloc_hook是相邻的，在攻击malloc_hook我们没有能够成功执行one_gadgets，但是我们可以通过将__malloc_hook更改为_libc_realloc+0x14,将__realloc_hook更该为one_gadgets。
+2.在地址上__malloc_hook与__realloc_hook是相邻的，在攻击malloc_hook我们没有能够成功执行one_gadgets，但是我们可以通过将__malloc_hook更改为_libc_realloc+0x14,将__realloc_hook更该为one_gadgets。
 这样的好处在于，我们能够控制__malloc_hook指向的代码的内容，规避掉_libc_realloc中部分指令，从而更改在执行one_gadgets时的占空间，创建能够成功执行one_gadgets的栈空间。这是一个很巧妙的点
 
-虽然`__free_hook`上方几乎是"\x00"，无可用size，但是我们可以先用 unsorted attack 攻击`__free_hook`上方，在其上方踩出 size，再去劫持 __free_hook。
+3.虽然`__free_hook`上方几乎是"\x00"，无可用size，但是我们可以先用 unsorted attack 攻击`__free_hook`上方，在其上方踩出 size，再去劫持 __free_hook。
+
+
+4.使用`tcache stashing attack`或`unsorted_bin_attack`，将`_IO_2_1_stdin_->_IO_buf_end`改成`main_arena+x`(我这里是+352)，从而可以在scanf的时候输入数据到`realloc_hook`和`malloc_hook`，改成one_gadget，调节下偏移即可。
+
+
+
+5.利用house of husk ,覆写`__printf_function_table`表为heap地址(让其不为空)，覆写`__printf_arginfo_table`表为heap地址且heap['s']被覆写为了one_gadget，在调用格式化字符带有`%s`printf()函数时，即可get shell。
+
+6.写exit函数在ld.so中的`_rtld_global._dl_rtld_lock_rescursive` 为one_gadget
+
+7.当程序开启full relor时，可写libc中puts函数开头的strlen的got表
 
 ## 无leak函数的利用笔记：
 
@@ -766,6 +777,204 @@ _int_malloc (mstate av, size_t bytes)
 
 与此同时，如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。（任意地址分配内存在这种情况下是个鸡肋。。。。。。。）
 
+## glibc 2.28及以上堆利用的栈转移
+
+1.在2.29中vtable是可写的
+
+2.setcontext函数中gadget指令可控寄存器变成了rdx，非rdi
+
+#### 1.利用FSOP控制程序流程
+
+在libc-2.29下`_IO_strfile`没有了像libc-2.24下的`fp->_s._allocate_buffer()`这类函数操作，都被修改为了标准函数(malloc...)，所以没办法直接直接像libc-2.24那样直接劫持程序流。因此不能使用以前的`io_file`攻击手法来劫持流程，但是我们看到在`_IO_str_overflow`函数中有很多函数,并且参数我们都可以控制，因此我们可以利用这一点来完成新版的io_file攻击
+
+```c
+int
+_IO_str_overflow (FILE *fp, int c)
+{
+int flush_only = c == EOF;
+size_t pos;
+if (fp->_flags & _IO_NO_WRITES)
+return flush_only ? 0 : EOF;
+if ((fp->_flags & _IO_TIED_PUT_GET) && !(fp->_flags &
+_IO_CURRENTLY_PUTTING))
+{
+fp->_flags |= _IO_CURRENTLY_PUTTING;
+fp->_IO_write_ptr = fp->_IO_read_ptr;
+fp->_IO_read_ptr = fp->_IO_read_end;
+}
+pos = fp->_IO_write_ptr - fp->_IO_write_base;
+if (pos >= (size_t) (_IO_blen (fp) + flush_only))
+
+{
+if (fp->_flags & _IO_USER_BUF) /* not allowed to enlarge */
+return EOF;
+else
+{
+char *new_buf;
+char *old_buf = fp->_IO_buf_base;
+size_t old_blen = _IO_blen (fp);
+size_t new_size = 2 * old_blen + 100;
+if (new_size < old_blen)
+return EOF;
+new_buf = malloc (new_size);
+if (new_buf == NULL)
+{
+/* __ferror(fp) = 1; */
+return EOF;
+}
+if (old_buf)
+{
+memcpy (new_buf, old_buf, old_blen);
+free (old_buf);
+/* Make sure _IO_setb won't try to delete _IO_buf_base. */
+fp->_IO_buf_base = NULL;
+}
+memset (new_buf + old_blen, '\0', new_size - old_blen);
+_IO_setb (fp, new_buf, new_buf + new_size, 1);
+fp->_IO_read_base = new_buf + (fp->_IO_read_base - old_buf);
+fp->_IO_read_ptr = new_buf + (fp->_IO_read_ptr - old_buf);
+fp->_IO_read_end = new_buf + (fp->_IO_read_end - old_buf);
+fp->_IO_write_ptr = new_buf + (fp->_IO_write_ptr - old_buf);
+fp->_IO_write_base = new_buf;
+fp->_IO_write_end = fp->_IO_buf_end;
+}
+}
+if (!flush_only)
+*fp->_IO_write_ptr++ = (unsigned char) c;
+if (fp->_IO_write_ptr > fp->_IO_read_end)
+fp->_IO_read_end = fp->_IO_write_ptr;
+return c;
+}
+```
+
+看`_IO_str_overflow`对应的汇编代码：
+
+
+```c
+.text:00007FFFF7E73AEB                 mov     rdx, [rdi+28h]      
+.text:00007FFFF7E73AEF 
+.text:00007FFFF7E73AEF loc_7FFFF7E73AEF:                       ; CODE XREF: _IO_str_overflow+175↓j 
+.text:00007FFFF7E73AEF                 mov     r12, [rdi+38h] 
+.text:00007FFFF7E73AF3                 mov     r15, [rdi+40h] 
+.text:00007FFFF7E73AF7                 xor     eax, eax 
+.text:00007FFFF7E73AF9                 mov     ebp, esi 
+.text:00007FFFF7E73AFB                 mov     rbx, rdi 
+.text:00007FFFF7E73AFE                 sub     r15, r12 
+.text:00007FFFF7E73B01                 cmp     esi, 0FFFFFFFFh 
+.text:00007FFFF7E73B04                 mov     rsi, rdx 
+.text:00007FFFF7E73B07                 setz    al 
+.text:00007FFFF7E73B0A                 sub     rsi, [rdi+20h] 
+.text:00007FFFF7E73B0E                 add     rax, r15 
+.text:00007FFFF7E73B11                 cmp     rax, rsi 
+.text:00007FFFF7E73B14                 ja      loc_7FFFF7E73BF0 
+.text:00007FFFF7E73B1A                 and     ecx, 1 
+.text:00007FFFF7E73B1D                 jnz     loc_7FFFF7E73C50 
+.text:00007FFFF7E73B23                 lea     r14, [r15+r15+64h] 
+.text:00007FFFF7E73B28                 cmp     r15, r14 
+.text:00007FFFF7E73B2B                 ja      loc_7FFFF7E73C50 
+.text:00007FFFF7E73B31                 mov     rdi, r14 
+.text:00007FFFF7E73B34                 call    j_malloc
+
+
+```
+可看到调用malloc之前rdx可控制为[rdi+28h]
+
+攻击方式：
+
+* 劫持`IO_list_all`指向我们伪造的`io_file`
+
+* 劫持`malloc_hook`为setcontext+61
+
+* `io_str_overflow`里面会调用malloc,调用malloc之前`rdx=rdi+0x28`  `rdi=&fake_IO_FILE` ,此时rdi可控，执行srop
+
+
+还一种情况是不能分配到理想大小的tcache，无法通过常规方式劫持free或`malloc_hook`项。（参见TCTF2020 duet）
+
+在执行FSOP前布置好一条tcache bin：`chunk A-> ptr`
+构造好三个IO_FILE: `X.chain -> Y.chain -> Z.chain`
+
+调用malloc前rdx=rdi+0x28  rdi=&fake_IO_FILE ,此时rdi可控。
+
+这样就可以利用FSOP在`_IO_flush_all_lockp`时三次进入`_IO_str_overflow`；第一次控制malloc参数将chunk A分配出来；第二次的时候调用malloc就会分配到ptr，而后memcpy（参见`_IO_str_overflow` C源码），即可进行任意地址写（通常将`_malloc_hook`写成setcontext+61，用于第三次刷新IO用）；第三次调用malloc，即可setcontext实现orw。
+
+#### 2.利用`_free_hook`控制程序流程
+
+* **方法 I ：**
+
+然而在我们控了free_hook以后，我们发现libc-2.29中没有可以利用rdi控制rsp进行迁栈的gadget，所以使用了其它方法。`IO_wfile_sync`函数可以利用rdi控制rdx，函数setcontext+0x35处可以用rdx控rsp，两个搭配使用就可以进行迁栈。在`IO_wfile_sync+0x6d`处有call [r12+0x20]，这里的r12也是可以用rdi控制的，所以可以利用这条指令调用setcontext+0x35，实现`free_hook -> IO_wfile_sync -> setcontext+0x35`
+
+
+```python
+.text:0000000000089460 _IO_wfile_sync  proc near               ; DATA XREF: LOAD:0000000000010230↑o
+.text:0000000000089460                                         ; __libc_IO_vtables:00000000001E5F00↓o ...
+.text:0000000000089460
+.text:0000000000089460 var_20          = qword ptr -20h
+.text:0000000000089460
+.text:0000000000089460 ; __unwind {
+.text:0000000000089460                 push    r12
+.text:0000000000089462                 push    rbp
+.text:0000000000089463                 push    rbx
+.text:0000000000089464                 mov     rbx, rdi
+.text:0000000000089467                 sub     rsp, 10h
+.text:000000000008946B                 mov     rax, [rdi+0A0h]
+.text:0000000000089472                 mov     rdx, [rax+20h]
+.text:0000000000089476                 mov     rsi, [rax+18h]
+.text:000000000008947A                 cmp     rdx, rsi
+.text:000000000008947D                 jbe     short loc_894AD
+.text:000000000008947F                 mov     eax, [rdi+0C0h]
+.text:0000000000089485                 test    eax, eax
+.text:0000000000089487                 jle     loc_89590
+.text:000000000008948D                 sub     rdx, rsi
+.text:0000000000089490                 sar     rdx, 2
+.text:0000000000089494                 call    _IO_wdo_write
+.text:0000000000089499                 test    eax, eax
+.text:000000000008949B                 setnz   al
+.text:000000000008949E                 test    al, al
+.text:00000000000894A0                 jnz     loc_895AD
+.text:00000000000894A6
+.text:00000000000894A6 loc_894A6:                              ; CODE XREF: _IO_wfile_sync+147↓j
+.text:00000000000894A6                 mov     rax, [rbx+0A0h]
+.text:00000000000894AD
+.text:00000000000894AD loc_894AD:                              ; CODE XREF: _IO_wfile_sync+1D↑j
+.text:00000000000894AD                 mov     rsi, [rax]
+.text:00000000000894B0                 mov     rax, [rax+8]
+.text:00000000000894B4                 cmp     rsi, rax
+.text:00000000000894B7                 jz      short loc_89532
+.text:00000000000894B9                 sub     rsi, rax
+.text:00000000000894BC                 mov     r12, [rbx+98h]
+.text:00000000000894C3                 sar     rsi, 2
+.text:00000000000894C7                 mov     rbp, rsi
+.text:00000000000894CA                 mov     rdi, r12
+.text:00000000000894CD                 call    qword ptr [r12+20h]
+```
+
+* **方法 II :**
+
+利用libc中的这段gadget
+
+```
+sub rsp,0x18
+mov rbp,[rdi+0x48]
+mov rax,[rbp+0x18]
+lea r13,[rbp+0x10]
+mov dword ptr [rbp+0x10],0
+mov rdi,r13
+call qword ptr [rax+0x28]
+```
+
+将`free_hook`写成这个gadget，可控制rbp寄存器，call时跳转到`leave_ret`指令实现栈迁移
+
+
+#### 3.利用fclose（特殊条件）
+
+fclose的源码，其核心函数是位于/libio/iofclose.c的`_IO_new_fclose`函数，其大致流程是：首先检查文件结构体指针，之后使用`_IO_un_link`将文件结构体从`_IO_list_all`链表取下，`_IO_file_close_it`里会最终调用`IO_SYSCLOSE(fp)`关闭文件描述符，之后返回fclose函数会调用到vtable里面的函数`_IO_FINISH(fp)`，如果并非stdin/stdout/stderr最后调用free(fp)释放结构体指针。
+
+
+在`_IO_file_close_it`里调用`IO_SYSCLOSE(fp)`，或是在fclose里调用`_IO_FINISH(fp)`的时候，rdx的寄存器值都是`_IO_helper_jumps`，所以只要我们能控制`_IO_helper_jumps`的值就能控制rdx（2.29以上`jumps_table`可写）.
+
+利用方式：
+
+我们可以将`IO_file_jumps`+0x88(sysclose)（0x10(finish)）的位置覆盖为setcontext+53并且在`IO_helper_jumps`上布置setcontext参数，或者将vtable直接覆盖为`IO_helper_jumps`，然后直接在`IO_helper_jumps`布置所有的值。
 
 ## House-of-Corrosion 任意地址写
 

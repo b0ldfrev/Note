@@ -4,7 +4,7 @@
 
 ```python
 argv1 = claripy.BVS("argv1",100*8)
-initial_state = project.factory.entry_state(args=["./crackme1",argv1])
+initial_state = p.factory.entry_state(args=["./crackme1",argv1])
 ```
 
 ## 正常输入
@@ -14,7 +14,7 @@ initial_state = project.factory.entry_state(args=["./crackme1",argv1])
 现在几乎都是使用新版本的angr，在创建`init_state`时使用  
 ```python
   p = angr.Project("test")
-  initial_state = project.factory.entry_state(
+  initial_state = p.factory.entry_state(
             args=['./test'],
             stdin=flag,
     )
@@ -36,13 +36,25 @@ initial_state = p.factory.full_init_state(
 
 ## 一些约束
 
-直接使用claripy创建向量，bit_chars是一个BVS类型的list，这样创建便于对每字节数据做约束
 
-bit用了Concat方法将list转化成一个完整的BVS向量，并在末尾加换行符。
+**BV：bitvector**
+构造符号值或具体值的一个比特容器，它具有大小。这些值并不是简单数值（不可以直接参与算术运算），它是一个bit序列，可以用有界整数（可以直接参与算术运算）来解释。
+例：
+建立一个32bit的符号值容器 "x":
+`claripy.BVS('x',32)`
+建立一个32bit的具体值(0xc001b3475)容器:
+`claripy.BVV(0xc001b3a75,32)`
+建立一个32bit的步进值，从1000到2000能被10整除的数:
+`claripy.SI(name='x',bits=32,lower_bound=1000,upper_bound=2000,stride=10)`
+
+
+
+下面类似z3的使用，直接使用claripy创建向量，flag_chars是一个BVS类型的list，这样创建便于对每字节数据做约束. 
+flag用了Concat方法将list转化成一个完整的BVS向量，并在末尾加换行符。
 
 ```python
-    bit_chars = [claripy.BVS('argv_%d' % i, 8) for i in range(32)]
-    bit = claripy.Concat(*argv_chars+ [claripy.BVV(b'\n')])
+    flag_chars = [claripy.BVS('flag_%d' % i, 8) for i in range(32)]
+    flag = claripy.Concat(*flag_chars+ [claripy.BVV(b'\n')])
 
 ```
 添加约束，提高数据的生成效率：
@@ -166,7 +178,7 @@ flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
 
 ```python 
 
-simulation = project.factory.simgr(initial_state)
+simulation = p.factory.simgr(initial_state)
 simulation.explore(find=addr1,void=addr2) 
 
 ```
@@ -212,7 +224,7 @@ simulation.explore(find=is_successful, avoid=should_abort)
 
 if simulation.found:
     solution_state = simulation.found[0]
-    print solution_state.posix.dumps(sys.stdin.fileno()).strip('\0\n') //打印输入的值
+    print solution_state.posix.dumps(sys.stdin.fileno()).strip('\0\n') //打印标准输入的值(未定义BVS)
     print solution_state.solver.eval(flag, cast_to=bytes)  //打印定义的BVS的值
 
 else:

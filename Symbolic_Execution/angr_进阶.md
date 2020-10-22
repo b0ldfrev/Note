@@ -1,3 +1,15 @@
+## 载入二进制文件
+
+载入二进制文件使用angr.Project函数，它的第一个参数是待载入文件的路径，后面还有很多的可选参数：
+
+`p = angr.Project("test",auto_load_libs = False)`
+
+auto_load_libs设置是否自动载入依赖的库，如果设置为True的话会自动载入依赖的库，然后分析到库函数调用时也会进入库函数，这样会增加分析的工作量，也有可能会跑挂。
+
+如果auto_load_libs为true，那么程序如果调用到库函数的话就会直接调用真正的库函数，如果有的库函数逻辑比较复杂，可能分析程序就跑不出来了= = 同时angr使用python实现了很多的库函数（保存在angr.SIM_PROCEDURES），默认情况下会使用列表内不得函数来替换实际的函数调用，如果不在列表内才会进入到真正的library。跑windows程序由于环境复杂性太大，最好使其为False.
+
+如果auto_load_libs为false，程序调用函数时，会直接返回一个 不受约束 的符号值。
+
 ## 喂参数给程序
 
 创建init_state之前生成位向量符号argv1 ，作为程序的参数。
@@ -13,21 +25,25 @@ initial_state = p.factory.entry_state(args=["./crackme1",argv1])
 
 现在几乎都是使用新版本的angr，在创建`init_state`时使用  
 ```python
-  p = angr.Project("test")
+  
   initial_state = p.factory.entry_state(
-            args=['./test'],
+            addr=0x401000,
             stdin=flag,
     )
 ```
+其中addr与stdin都是可选参数。
 
-args是程序文件，flag是使用claripy的 BVS() 方法生成的位向量符号，做为stdin输入。
+entry_state：做一些初始化工作，然后在程序的默认入口（也可以指定addr）停下。在创建完entry_state，之后就可以通过这个state对象，获取或者修改此时程序的运行状态。
+
+flag是使用claripy的 BVS() 方法生成的位向量符号，做为stdin输入，若没有传递stdin参数，那angr默认程序的输入为标准输入。
+
+
 
 对于C++的程序，state时需要使用full_init_state方法并，设置unicorn引擎
 
 ```python
 
 initial_state = p.factory.full_init_state(
-            args=['./cplus'],
             add_options=angr.options.unicorn,
             stdin=flag,
     )
@@ -150,7 +166,7 @@ initial_state.memory.store(bind_addr, data)
 
 一些函数对结果没有影响，可直接将函数hook返回0，如printf类:
 
-`p.hook_symbol('printf',SIM_PROCEDURES['stubs']['ReturnUnconstrained'](),replace = True)`
+`p.hook_symbol('printf',angr.SIM_PROCEDURES['stubs']['ReturnUnconstrained'](return_value=0),replace = True)`
 
 另外，对于代码自修改程序，需要使用如下的方式
 

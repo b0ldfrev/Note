@@ -74,6 +74,9 @@ for k in flag_chars:
 
 ```
 
+## 优化执行
+
+大多数情况下，添加该参数可提高脚本运行效率。`simulation.one_active.options.add(angr.options.LAZY_SOLVES)`
 
 
 ## 任意位置加载程序
@@ -139,20 +142,39 @@ initial_state.memory.store(bind_addr, data)
 
 对于更复杂的情况，比如当前位置的一个子函数加载程序后，涉及到从子函数中退出，会用到返回地址，栈帧，我们就必需要手动构造一个完整的栈结构。
 
+## 开启PIE
+
+对于开启PIE的程序，程序的基址固定在0x400000处，提取使用时应该加上该值。
 
 ## 反调试与hook
 
-将ptrace函数hook返回0
+一些函数对结果没有影响，可直接将函数hook返回0，如printf类:
 
-`p.hook_symbol('ptrace', angr.SIM_PROCEDURES['stubs']['ReturnUnconstrained'](return_value=0))`
+`p.hook_symbol('printf',SIM_PROCEDURES['stubs']['ReturnUnconstrained'](),replace = True)`
 
 另外，对于代码自修改程序，需要使用如下的方式
 
 `p = angr.Project("crackme", support_selfmodifying_code=True) `
 
+对于静态链接的程序，需要hook函数地址为libc函数或者自己优化的函数，不然效率很慢。
+```
+p.hook(0x804f350, angr.SIM_PROCEDURES['libc']['scanf']())
+p.hook(0x8048d10, angr.SIM_PROCEDURES['glibc']['__libc_start_main']())
+
+```
+```
+class my_function(angr.SimProcedure)
+   def run(self,a):
+        return a+24
+
+p.hook(addr, hook= my_function())
+
+```
+
+
 hook到一些关键函数上，达到控制效果。
 
-比如控制scanf就可以达到和控制返回值类似的效果。
+优化scanf就可以达到和控制返回值类似的效果。
 
 ```python
 flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
@@ -172,6 +194,22 @@ flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
 
 这样程序每次调用scanf时，其实就是在执行my_scanf就会将flag_chars[i]存储到self.state.mem[ptr]当中，这其中ptr参数，其实就是本身scanf函数传递进来的rdi也,为了控制下标，我们设置了一个全局符号变量scanf_count。因为上面演示代码中程序中存在多处scanf输入。
 
+或者如下面这样，让其自己获取输入的
+
+```
+class my_scanf(angr.SimProcedure): # 固有格式
+    def run(self,fmt,n): # 参数为 (self + 该函数实际参数)
+        simfd = self.state.posix.get_fd(0) # 创建一个标准输入对对象
+        data,real_size = simfd.read_data(4) # 注意该函数返回两个值 第一个是读到的数据内容 第二个数内容长度
+        self.state.memory.store(n,data) # 将数据保存到相应参数内
+        return 1 # 返回原本函数该返回的东西
+p.hook_symbol('__isoc99_scanf',my_scanf(),replace = True)
+# 这里%d对应int 是4个字节 但是读取到一个int所以返回1  所以这完全是模拟的原来的函数
+
+```
+
+
+
 ## 路径探索
 
 最后通过传入参数 initial_state 调用 simgr 函数创建 Simulation Manager 对象,在通过simulation执行explore方法找路径。
@@ -179,7 +217,7 @@ flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
 ```python 
 
 simulation = p.factory.simgr(initial_state)
-simulation.explore(find=addr1,void=addr2) 
+simulation.explore(find=addr1,void=addr2)
 
 ```
 

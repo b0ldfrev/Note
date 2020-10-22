@@ -172,13 +172,13 @@ initial_state.memory.store(bind_addr, data)
 
 `p = angr.Project("crackme", support_selfmodifying_code=True) `
 
-对于静态链接的程序，需要hook函数地址为libc函数或者自己优化的函数，不然效率很慢。
-```
+对于静态链接的程序，需要hook函数地址为libc函数 或者有时需要自己优化函数。
+```python
 p.hook(0x804f350, angr.SIM_PROCEDURES['libc']['scanf']())
 p.hook(0x8048d10, angr.SIM_PROCEDURES['glibc']['__libc_start_main']())
 
 ```
-```
+```python
 class my_function(angr.SimProcedure)
    def run(self,a):
         return a+24
@@ -212,7 +212,7 @@ flag_chars = [claripy.BVS('flag_%d' % i, 32) for i in range(13)]
 
 或者如下面这样，让其自己获取输入的
 
-```
+```python
 class my_scanf(angr.SimProcedure): # 固有格式
     def run(self,fmt,n): # 参数为 (self + 该函数实际参数)
         simfd = self.state.posix.get_fd(0) # 创建一个标准输入对对象

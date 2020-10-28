@@ -56,11 +56,17 @@ initial_state = p.factory.full_init_state(
 **BV：bitvector**
 构造符号值或具体值的一个比特容器，它具有大小。这些值并不是简单数值（不可以直接参与算术运算），它是一个bit序列，可以用有界整数（可以直接参与算术运算）来解释。
 例：
+
 建立一个32bit的符号值容器 "x":
+
 `claripy.BVS('x',32)`
+
 建立一个32bit的具体值(0xc001b3475)容器:
+
 `claripy.BVV(0xc001b3a75,32)`
+
 建立一个32bit的步进值，从1000到2000能被10整除的数:
+
 `claripy.SI(name='x',bits=32,lower_bound=1000,upper_bound=2000,stride=10)`
 
 

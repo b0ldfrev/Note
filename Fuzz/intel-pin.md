@@ -10,7 +10,7 @@
 
 ## 使用1
 
-在 source/tools/ManualExamples 中有一些现成的 pintool 可以使用，基本涵盖了各个模块的用法。
+在 source/tools/ManualExamples 中有一些现成的 pintool 可以使用，基本涵盖了各个模块的用法。`inscount0.cpp`是指令计数插桩的功能，`inscount1.cpp`是基本块计数(条件分支)的插桩功能。
 
 下面就说说指令计数的功能。
 
@@ -37,6 +37,60 @@ VOID Fini(INT32 code, VOID *v)
 注释掉OutFile部分，不让输出文件，直接cout输出结果到命令行。
 
 ## 使用2
+
+对于基本块这种情况，有些时候在程序运行过程中，我们只关心程序本身执行的基本块的个数，并不关心在外部动态链接库中的执行，因此需要使用`IMG_AddInstrumentFunction`记录程序镜像开始和结束地址
+
+```c
+//主函数，在调用TRACE_AddInstrumentFunction之前插入IMG_AddInstrumentFunction调用
+........
+IMG_AddInstrumentFunction(imageLoad, 0);
+...........
+
+
+
+//全局变量
+ADDRINT imageBase;
+ADDRINT imageEnd;
+
+
+
+//imageLoad函数
+void imageLoad(IMG img, void *v)
+{
+	if (IMG_IsMainExecutable(img))
+	{
+		imageBase = IMG_LowAddress(img);
+		imageEnd = IMG_HighAddress(img);
+	}
+
+}
+
+
+
+//在Trace函数开始处添加
+	ADDRINT addr = TRACE_Address(trace);
+	if (addr < imageBase || addr > imageEnd)
+	{
+		return;
+	}
+
+
+```
+
+`inscount1.cpp`默认的docount函数是这样的，貌似是值记录基本块的指令数.....
+
+```c
+VOID docount(UINT32 c) { icount += c; }
+```
+
+我们可以定义个`UINT64 bblCount = 0;`全局变量，在docount函数里面添加基本块的计数：
+
+```c
+VOID docount(UINT32 c) {bblCount++; icount += c; }
+```
+
+
+## 使用3
 
 对于一些相同的输入但是指令数不固定的程序，我们可以找到关键校验地址，对 inscount0 的 docount 函数做如下更改
 
@@ -105,60 +159,4 @@ if __name__ == "__main__":
 
 ```
 
-猜结果
-
-```python
-
-from subprocess import Popen, PIPE
-from sys import argv
-import string
-import pdb
-import time
-
-pinPath = "/home/boldfrev/pin/pin"
-pinInit = lambda tool, elf: Popen([pinPath, '-t', tool, '--', elf], stdin = PIPE, stdout = PIPE)
-pinWrite = lambda cont: pin.stdin.write(cont)
-pinRead = lambda : pin.communicate()[0]
-
-def Read():
-    f = open('./inscount.out','r')
-    file  = f.read().strip('\n')
-    f.close()
-    return file
-
-if __name__ == "__main__":
-
-    last = 0
-    length=8  # flag length
-    diff=1000  # instruction difference
-    dic = "\x01"+string.ascii_letters + string.digits + "+_ "+"{}"
-    pwd = '?' *length
-    dicIdx = 0
-    pwdIdx = 0
-
-    while True:
-	
-        pwd = pwd[: pwdIdx] + dic[dicIdx] + pwd[pwdIdx + 1: ]
-        
-        pin = pinInit("./inscount1.so","./crackme")
-        pinWrite(pwd + '\n')
-        #time.sleep(0.2)
-        try:
-        	now = int(pinRead().split("Count ")[1])
-	    except:
-			time.sleep(0.2)
-			now = int(pinRead().split("Count ")[1])
-        print "input({}) -> now({}) -> delta({})".format(pwd, now, abs(now - last))
-
-        if abs(now - last) > diff and dicIdx:
-            pwdIdx += 1
-            dicIdx = -1
-            last = 0
-            if pwdIdx >= len(pwd):
-                print "Found pwd: {}".format(pwd)
-                break
-
-        dicIdx += 1
-        last = now
-
-```
+更多脚本见百度云intel-pin.

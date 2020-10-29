@@ -82,9 +82,50 @@ pwndbg> bt
 
 ## 程序退出
 
-程序在执行退出流程时，会在ld-x.xx.so这个动态装载器里面调用_dl_fini函数，这个函数，利用方式见下图：
+1.程序会执行到libc里面`__GI___call_tls_dtors`函数
+```python
+
+   0x7ffff7a475d0 <__GI___call_tls_dtors>:	  push   rbp
+   0x7ffff7a475d1 <__GI___call_tls_dtors+1>:	push   rbx
+   0x7ffff7a475d2 <__GI___call_tls_dtors+2>:	sub    rsp,0x8
+   0x7ffff7a475d6 <__GI___call_tls_dtors+6>:	mov    rbp,QWORD PTR [rip+0x3897a3]        # 0x7ffff7dd0d80
+=> 0x7ffff7a475dd <__GI___call_tls_dtors+13>:	mov    rbx,QWORD PTR fs:[rbp] # rbp=-0x40
+   0x7ffff7a475e2 <__GI___call_tls_dtors+18>:	test   rbx,rbx
+   0x7ffff7a475e5 <__GI___call_tls_dtors+21>:	je     0x7ffff7a4762e <__GI___call_tls_dtors+94>
+   0x7ffff7a475e7 <__GI___call_tls_dtors+23>:	nop    WORD PTR [rax+rax*1+0x0]
+   0x7ffff7a475f0 <__GI___call_tls_dtors+32>:	mov    rdx,QWORD PTR [rbx+0x18]
+   0x7ffff7a475f4 <__GI___call_tls_dtors+36>:	mov    rax,QWORD PTR [rbx]
+   0x7ffff7a475f7 <__GI___call_tls_dtors+39>:	mov    rdi,QWORD PTR [rbx+0x8]
+   0x7ffff7a475fb <__GI___call_tls_dtors+43>:	ror    rax,0x11
+   0x7ffff7a475ff <__GI___call_tls_dtors+47>:	xor    rax,QWORD PTR fs:0x30
+   0x7ffff7a47608 <__GI___call_tls_dtors+56>:	mov    QWORD PTR fs:[rbp+0x0],rdx
+   0x7ffff7a4760d <__GI___call_tls_dtors+61>:	call   rax
+   0x7ffff7a4760f <__GI___call_tls_dtors+63>:	mov    rax,QWORD PTR [rbx+0x10]
+
+```
+
+观察看出，`__GI___call_tls_dtors+18`也就是rbx不为零时，程序会执行到下面的`call rax`，且参数是由rbx控制，再看`__GI___call_tls_dtors+13`,rbx是fs:[-0x40]，也就是当前线程栈的TLS结构体的上方0x40处，若能覆盖到此处，就能控制程序执行流程。在最终`call rax`之前，还有一次`ror rax,0x11`和`xor rax, fs:[0x30]`，需要leak出TLS的pointer_guard成员.
+
+```c
+typedef struct {   
+void *tcb;        /* Pointer to the TCB.  Not necessarily the thread descriptor used by libpthread.  */   
+dtv_t *dtv;   
+void *self;       /* Pointer to the thread descriptor.  */   
+int multiple_threads;   
+int gscope_flag;   
+uintptr_t sysinfo;   
+uintptr_t stack_guard;   #canary  offset=fs:0x28
+uintptr_t pointer_guard;   
+... } tcbhead_t; 
+
+
+```
+
+2.程序在执行退出流程时，最终会在ld.so这个动态装载器里面调用_dl_fini函数，这个函数，利用方式见下图：
 
 ![](../pic/Miscellaneous/4.png)
+
+
 
 ## calloc绕过 leak
 

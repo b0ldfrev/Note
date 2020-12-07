@@ -514,7 +514,9 @@ if (__glibc_unlikely (e->key == tcache))
   }
 ```
 
-绕过方式：可以将同一个tcache_chunk放入不同的tcache_bin或其他bin中来重新实现利用（这种方式见House_of_botcake）；也可以篡改chunk->key，使其e->key != tcache来绕过
+绕过方式：可以将同一个tcache_chunk放入不同的tcache_bin或其他bin中来重新实现利用（这种方式见House_of_botcake）；也可以篡改chunk->key，使其e->key != tcache来绕过。
+
+也可以利用fastbin的double free，待fastbin形成double_free链后再重分配，tcache预留位置，使得fastbin进入tcache，实现堆块复用。详细可参见[glibc2.31下的新double free手法/字节跳动pwn题gun题解](https://blog.csdn.net/chennbnbnb/article/details/109284780)
 
 
 
@@ -1004,6 +1006,15 @@ call qword ptr [rax+0x28]
 ```
 
 将`free_hook`写成这个gadget，可控制rbp寄存器，call时跳转到`leave_ret`指令实现栈迁移
+
+或者glibc2.31中的这一段
+
+```
+0x7fcab86497a0 <getkeyserv_handle+576>    mov    rdx, qword ptr [rdi + 8]
+0x7fcab86497a4 <getkeyserv_handle+580>    mov    qword ptr [rsp], rax
+0x7fcab86497a8 <getkeyserv_handle+584>    call   qword ptr [rdx + 0x20] <0x7fcab854d0dd>
+
+```
 
 
 #### 3.利用fclose（特殊条件）

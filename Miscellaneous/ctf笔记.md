@@ -451,7 +451,7 @@ tcache的结构是由0x40字节数量数组（每个字节代表对应大小tcac
 而在tcache分配时，不会检查`tcache->counts[tc_idx]`的大小是否大于0，会造成下溢。且没有检测entries处chunk的合法性，我们若能伪造`tcache->entries[tc_idx]`的`tcache_entry`指针，那我们就能实现从tcache任意地址分配chunk。
 
 
-## 关于glibc 2.29一些check的绕过
+## 关于glibc 2.29及以上一些check的绕过
 
 1.在unlink操作前增加了prevsize的检查机制：在合并的时候会判断prev_size和要合并chunk的size是否相同。
 ```c
@@ -531,7 +531,23 @@ bck->fd = unsorted_chunks (av);
 
 ```
 
-但有另外的地方可利用，`unsortedbin_attack`无非就是往一个地址写一个值，如果只是为了改例如`global_max_fast`,那`largebin_attack`完全可以替代，只不过写入的是堆地址.
+但有另外的地方可利用，`unsortedbin_attack`无非就是往一个地址写一个值，如果只是为了改例如`global_max_fast`,那`largebin_attack`完全可以替代，只不过写入的是堆地址，只是和`largebin_attack`配套的`house of strom`来实现任意地址分配不能用了。
+
+```
+          if (__glibc_unlikely (size <= 2 * SIZE_SZ)
+              || __glibc_unlikely (size > av->system_mem))
+            malloc_printerr ("malloc(): invalid size (unsorted)");
+          if (__glibc_unlikely (chunksize_nomask (next) < 2 * SIZE_SZ)
+              || __glibc_unlikely (chunksize_nomask (next) > av->system_mem))
+            malloc_printerr ("malloc(): invalid next size (unsorted)");
+          if (__glibc_unlikely ((prev_size (next) & ~(SIZE_BITS)) != size))
+            malloc_printerr ("malloc(): mismatching next->prev_size (unsorted)");
+          if (__glibc_unlikely (bck->fd != victim)
+              || __glibc_unlikely (victim->fd != unsorted_chunks (av)))
+            malloc_printerr ("malloc(): unsorted double linked list corrupted");
+          if (__glibc_unlikely (prev_inuse (next)))
+            malloc_printerr ("malloc(): invalid next->prev_inuse (unsorted)");
+```
 
 如果要达到写libc地址，也可以，有师傅把它叫做**tcache stash unlink attack plus**，
 
@@ -624,8 +640,37 @@ while (tcache->counts[tc_idx] < mp_.tcache_count
 这时tcache已满，且tcache顶部刚好是我们伪造那个`target_chunk`
 
 
-
 4.在使用top chunk的时候增加了检查：size要小于等于system_mems，因为House of Force需要控制top chunk的size为-1，不能通过这项检查，所以House of Force不可用
+
+5.从glibc 2.30开始，常规large bin attack方法也被封堵
+
+
+
+```c
+  if ((unsigned long) size
+              == (unsigned long) chunksize_nomask (fwd))
+                        /* Always insert in the second position.  */
+                        fwd = fwd->fd;
+                      else
+                        {
+                          victim->fd_nextsize = fwd;
+                          victim->bk_nextsize = fwd->bk_nextsize;
+                          if (__glibc_unlikely (fwd->bk_nextsize->fd_nextsize != fwd))
+                            malloc_printerr ("malloc(): largebin double linked list corrupted (nextsize)");
+                          fwd->bk_nextsize = victim;
+                          victim->bk_nextsize->fd_nextsize = victim;
+                        }
+                      bck = fwd->bk;
+                      if (bck->fd != fwd)
+                        malloc_printerr ("malloc(): largebin double linked list corrupted (bk)");
+
+```
+
+查看相关代码，发现其中只增加了对 size 大于最小 size 的时候做了
+检查，但是小于最小 size 却没有进行检查，因此我们可以利用这一点来完成 libc2.30 及以上的`largebin attack`。
+
+具体做法是，往 `largebin` 中放一个堆块，并在 `unsorted bin` 中放一个比 `large bin` 中小但是在同一个 index的堆块，利用 `uaf` 修改 `large bin` 的 `bk_nextsize = 目标地址`，申请一个比 `unsorted bin` 中小的 `chunk` 触发攻击，此时 `largebin->bk_nextsize->fd_nextsize` 写入堆地址。
+
 
 ## tcache相关冷门漏洞(任意地址写与任意地址分配)
 

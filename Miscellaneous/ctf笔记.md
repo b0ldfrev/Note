@@ -516,7 +516,7 @@ if (__glibc_unlikely (e->key == tcache))
 
 绕过方式：可以将同一个tcache_chunk放入不同的tcache_bin或其他bin中来重新实现利用（这种方式见House_of_botcake）；也可以篡改chunk->key，使其e->key != tcache来绕过。
 
-也可以利用fastbin的double free，待fastbin形成double_free链后再重分配，tcache预留位置，使得fastbin进入tcache，实现堆块复用。详细可参见[glibc2.31下的新double free手法/字节跳动pwn题gun题解](https://blog.csdn.net/chennbnbnb/article/details/109284780)
+也可以利用fastbin的double free，待fastbin形成double_free链后再malloc重分配清空tchache预留位置，最后一次malloc使得剩余fastbin进入tcache，实现堆块复用。详细可参见[glibc2.31下的新double free手法/字节跳动pwn题gun题解](https://blog.csdn.net/chennbnbnb/article/details/109284780)
 
 
 
@@ -863,7 +863,7 @@ _int_malloc (mstate av, size_t bytes)
 
 如果我们通过UAF能修改fastbin链表尾部chunk的fd指针为一个`target_addr`，当这个`target_chunk`最后被滑入tcache中时，`target_chunk`做为tcache的头部，若tcache中存在其他chunk，则`target_chunk -> fd` 就被写入一个堆地址，实现任意地址写。
 
-与此同时，如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。（任意地址分配内存在这种情况下是个鸡肋。。。。。。。）
+与此同时，如果再次调用malloc申请chunk，得益于从tcache分配时未仔细检查`chunk_head`，这时便会从tcache中将这个`target_chunk`分配出来，实现任意地址分配内存。（任意地址分配内存在这种情况下是个鸡肋，因为我们完全可以不清空tcache,利用UAF+calloc也就是`fastbin_attck`来实现任意地址分配）
 
 ## glibc 2.28及以上堆利用的栈转移
 

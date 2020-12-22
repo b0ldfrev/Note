@@ -79,6 +79,11 @@ flag用了Concat方法将list转化成一个完整的BVS向量，并在末尾加
     flag = claripy.Concat(*flag_chars+ [claripy.BVV(b'\n')])
 
 ```
+
+或者也可以建立一个长度为 `flag_length * 8 `的符号值容器`flag_val = claripy.BVS('flag', flag_length * 8)`
+
+然后将其转化成数组形式`flag = flag_val.chop(8)`,这样就可以通过数组的方式访问flag[i].
+
 添加约束，提高数据的生成效率：
 
 可使用`initial_state.add_constraints（）`也可使用`initial_state.solver.add()`

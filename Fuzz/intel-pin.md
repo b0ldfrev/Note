@@ -15,7 +15,7 @@
 下面就说说指令计数的功能。
 
 `make obj-intel64/inscount0.so TARGET=intel64` 编译生成64位的pintool
-`make obj-ia32/inscount00.so ` 编译生成32位的pintool
+`make obj-ia32/inscount0.so TARGET=ia32` 编译生成32位的pintool
 
 `pin -t your_pintool -- your_binary <arg>` 使用基本命令 或者喂给输入在后面加 <<< "flag{dsada}"
 

@@ -261,8 +261,8 @@ __libc_realloc (void *oldmem, size_t bytes)
 checked_request2size (bytes, nb_szie);
 old_size = chunksize (oldmem);
 
-// 如果oldmem指针为零，相当于free
-if (oldmem = 0) 
+// 如果bytes为零，相当于free
+if (bytes = 0) 
 { 
 	free(oldmem); 
 	return 0;
@@ -271,11 +271,12 @@ if (oldmem = 0)
 //  如果old_size大于请求size，那就缩减old_size,如果缩减的size小于当前arch最小chunk的大小(不能切割出一个chunk)，那就直接返回原来的oldmem，剩下的交给用户处理，不多管.
 if (old_size > nb_size)  
 { 
-old_size=nb_size; 
+
 if (old_size - nb_size >= 4 * SIZE_SZ) 
 {
   free( oldmem + nb_size );
 }  
+old_size=nb_size; 
 return oldmem; 
 }
 

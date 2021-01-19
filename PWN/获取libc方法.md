@@ -9,7 +9,7 @@
 
 第二个推荐的网站是[https://libc.blukat.me](https://libc.blukat.me)。这个网站同样可以通过泄露的地址来查询libc。我们通过给出__libc_start_main和read的地址后三位可以查到libc版本
 
-并且查询结果还以__libc_start_main为基准给出了常用符号和所有符号的偏移。
+并且查询结果还以`__libc_start_main`为基准给出了常用符号和所有符号的偏移。
 
 ![](../pic/other/5.png)
 

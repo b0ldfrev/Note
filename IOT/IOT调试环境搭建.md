@@ -219,7 +219,7 @@ sudo ifconfig tap0 192.168.122.11/24 up
 sudo brctl addif virbr0 tap0
 ```
 
-2.[下载](https://people.debian.org/~aurel32/qemu/mipsel/)并启动qemu镜像(通常只需下载readme.txt提示的几个配套文件)
+2.[下载](https://people.debian.org/~aurel32/qemu/mipsel/)并启动qemu镜像(通常只需下载readme.txt提示的几个配套文件)，如需要自己编译内核镜像看这里[https://bbs.pediy.com/thread-266262.htm](https://bbs.pediy.com/thread-266262.htm)
 
 ```ruby
 sudo qemu-system-mipsel -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -netdev tap,id=tapnet,ifname=tap0,script=no -device rtl8139,netdev=tapnet -nographic

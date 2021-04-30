@@ -222,7 +222,7 @@ sudo brctl addif virbr0 tap0
 2.[下载](https://people.debian.org/~aurel32/qemu/mipsel/)并启动qemu镜像(通常只需下载readme.txt提示的几个配套文件)，如需要自己编译内核镜像看这里[https://bbs.pediy.com/thread-266262.htm](https://bbs.pediy.com/thread-266262.htm)
 
 ```ruby
-sudo qemu-system-mipsel -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -netdev tap,id=tapnet,ifname=tap0,script=no -device rtl8139,netdev=tapnet -nographic
+sudo qemu-system-mipsel -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -net nic,vlan=0 -net tap,vlan=0,ifname=tap0 -nographic
 
 ```
 输入root/root进入虚拟机，设置ip：
@@ -234,11 +234,11 @@ ifconfig eth0 192.168.122.12/24 up
 
 也可以这样启动镜像：
 ```
-qemu-system-mips64el -M malta -kernel vmlinux-3.2.0-4-5kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1" -netdev user,id=net0 -device e1000,netdev=net0,id=net0,mac=52:54:00:c9:18:27 -redir tcp:11022::22 -redir tcp:11000::11000  -nographic```
+sudo qemu-system-mipsel -M malta -kernel vmlinux-3.2.0-4-4kc-malta -hda debian_wheezy_mipsel_standard.qcow2 -append "root=/dev/sda1 console=tty0" -net user,hostfwd=tcp::80-:80,hostfwd=tcp::443-:443,hostfwd=tcp::2222-:22 -net nic -nographic```
 
-这样就可以与guest虚拟机ssh连接了，而且guest虚拟机可以连接互联网
+这样就可以将qemu里面的端口映射到主机，供实体机访问。
 
-`ssh -p 11022 root@127.0.0.1`
+`ssh -p 2222 root@127.0.0.1`
 
 
 2.如需从主机传输数据，使用

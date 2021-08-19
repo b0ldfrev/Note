@@ -125,6 +125,18 @@ uintptr_t pointer_guard;
 
 ![](../pic/Miscellaneous/4.png)
 
+```python
+pwndbg> 
+10:0080│   0x7fffffffe4c0 ◂— 0x0
+... ↓
+13:0098│   0x7fffffffe4d8 —▸ 0x7fffffffe548 —▸ 0x7fffffffe7bc ◂— 'LC_PAPER=zh_CN.UTF-8'
+14:00a0│   0x7fffffffe4e0 —▸ 0x7ffff7ffe168 ◂— 0x0
+15:00a8│   0x7fffffffe4e8 —▸ 0x7ffff7de77db (_dl_init+139) ◂— jmp    0x7ffff7de77b0
+16:00b0│   0x7fffffffe4f0 ◂— 0x0
+```
+
+rbx的值为栈里_dl_init+139上方的0x7ffff7ffe168
+
 
 
 ## calloc绕过 leak
